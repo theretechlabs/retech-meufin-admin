@@ -83,6 +83,12 @@ export const businessRules: Record<string, BusinessRule> = {
     icon: PaymentsRoundedIcon,
     blocks: [
       {
+        type: 'callout',
+        tone: 'info',
+        title: 'Os cards seguem o VENCIMENTO, como a lista',
+        text: '"Receitas do mês", "Recebido" e "A receber" olham o que vence no mês escolhido. "Entrou no caixa" é o outro eixo: tudo que foi recebido dentro do mês, mesmo vencendo em outro — o mesmo número da dashboard. Os cards somam o mês inteiro e respeitam mês, ano e membro; os demais filtros só afetam a lista.',
+      },
+      {
         type: 'paragraph',
         text: 'Receita entra sempre pelo valor BRUTO do contrato. Desconto na origem (ex.: equipamento comprado pela empresa e abatido do repasse) vira uma despesa espelhada na mesma data — o líquido aparece no saldo, e as três verdades se preservam: quanto você fatura, pra onde foi o dinheiro e o rastro do bem.',
       },
@@ -105,9 +111,23 @@ export const businessRules: Record<string, BusinessRule> = {
     ],
   },
   'finance.expenses': {
-    title: 'Parcelas, retroativos e recorrências',
+    title: 'Cards, parcelas, retroativos e recorrências',
     icon: TrendingDownRoundedIcon,
     blocks: [
+      {
+        type: 'callout',
+        tone: 'info',
+        title: 'Os cards seguem o VENCIMENTO, como a lista',
+        text: '"Contas do mês", "Pago" e "A pagar" olham o que vence no mês escolhido: total sem canceladas, quanto disso já foi pago (pelo valor pago) e quanto está em aberto. "Saiu do caixa" é o outro eixo: tudo que foi pago dentro do mês, mesmo vencendo em outro — o mesmo número da dashboard.',
+      },
+      {
+        type: 'list',
+        items: [
+          'Os cards respeitam mês, ano e membro. Status, categoria e busca filtram só a lista.',
+          'Os cards somam o mês inteiro, não só a página visível.',
+          'Isenção total (desconto igual ao valor) conta como paga com valor zero.',
+        ],
+      },
       {
         type: 'callout',
         tone: 'warning',
@@ -160,13 +180,20 @@ export const businessRules: Record<string, BusinessRule> = {
         text: 'A fatura entra pelo total; as compras dentro dela ficam de fora dos totais. Já no gráfico de categorias é o contrário: valem as compras (com a categoria real de cada uma), não a fatura.',
       },
       {
+        type: 'callout',
+        tone: 'info',
+        title: 'Dois eixos: caixa e competência',
+        text: 'O número grande dos cards "Saiu/Entrou do caixa no mês" é CAIXA: o que foi pago ou recebido dentro do mês, não importa quando vencia. A legenda embaixo é COMPETÊNCIA: quanto vence no mês e quanto ainda está em aberto. Uma parcela de dezembro paga em agosto conta no caixa de agosto e no "vence" de dezembro.',
+      },
+      {
         type: 'list',
         items: [
-          'Realizado usa o valor efetivamente pago quando informado na liquidação (juros/multa/desconto contam).',
-          'Previsto = tudo que não foi cancelado (previstas + realizadas).',
-          'A pagar / A receber = lançamentos ainda previstos no mês.',
+          'Caixa usa o valor efetivamente pago (juros, multa e desconto contam; isenção total conta zero).',
+          'Vence no mês = previstas + realizadas que vencem no mês (canceladas fora).',
+          'A pagar / A receber = o que vence no mês e ainda está previsto.',
+          'Liquidação por compensação (ex.: usado abatido na troca) fica fora do caixa: nenhum dinheiro passou.',
           'Parcelas futuras somam parcelas previstas que vencem após o mês selecionado.',
-          'Lançamentos cancelados nunca entram em nenhum número.',
+          'Os mesmos números aparecem nos cards de Despesas e Receitas — vêm da mesma fonte.',
         ],
       },
       {
