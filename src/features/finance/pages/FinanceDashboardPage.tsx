@@ -50,16 +50,25 @@ import { EmptyState, ErrorState, LoadingState } from '@/features/health/componen
  * "ainda falta" — era a confusão do rótulo antigo "Previsto", que parecia
  * dizer que havia algo pendente mesmo com tudo realizado.
  */
-function expectedCaption(
+/**
+ * Legenda do eixo COMPETÊNCIA sob um card de CAIXA. O número grande é o que
+ * entrou/saiu do caixa no mês (qualquer vencimento); a legenda diz quanto
+ * VENCE no mês e quanto disso ainda está em aberto — os mesmos números dos
+ * cards "Contas do mês" / "A pagar" da tela de Despesas (e Receitas).
+ * `pendingCents` vem do backend (status prevista), não de subtração: a
+ * parcela antecipada em outro mês faria a conta no browser dar negativo.
+ */
+function dueCaption(
+  dueWord: string,
   expectedCents: number | undefined,
-  realizedCents: number | undefined,
+  pendingCents: number | undefined,
   pendingWord: string
 ): string {
   const expected = expectedCents ?? 0
-  const pending = Math.max(0, expected - (realizedCents ?? 0))
-  if (expected === 0) return 'Nada esperado no mês'
-  if (pending === 0) return `Esperado no mês: ${formatCents(expected)} · ✓ tudo realizado`
-  return `Esperado no mês: ${formatCents(expected)} · ${pendingWord} ${formatCents(pending)}`
+  const pending = pendingCents ?? 0
+  if (expected === 0) return `Nada ${dueWord} no mês`
+  if (pending === 0) return `${dueWord} no mês: ${formatCents(expected)} · ✓ tudo quitado`
+  return `${dueWord} no mês: ${formatCents(expected)} · ${pendingWord} ${formatCents(pending)}`
 }
 
 const MONTH_SHORT = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
@@ -263,18 +272,18 @@ export default function FinanceDashboardPage() {
         <Grid container spacing={2.5}>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <MoneyCard
-              title="Receitas do mês"
+              title="Entrou no caixa no mês"
               mainCents={s?.income_realized_cents ?? 0}
-              secondary={expectedCaption(s?.income_expected_cents, s?.income_realized_cents, 'a receber')}
+              secondary={dueCaption('Previsto', s?.income_expected_cents, s?.receivable_cents, 'a receber')}
               icon={TrendingUpRoundedIcon}
               tone="success"
             />
           </Grid>
           <Grid size={{ xs: 12, sm: 6, md: 4 }}>
             <MoneyCard
-              title="Despesas do mês"
+              title="Saiu do caixa no mês"
               mainCents={s?.expense_realized_cents ?? 0}
-              secondary={expectedCaption(s?.expense_expected_cents, s?.expense_realized_cents, 'a pagar')}
+              secondary={dueCaption('Vence', s?.expense_expected_cents, s?.payable_cents, 'a pagar')}
               icon={TrendingDownRoundedIcon}
               tone="error"
             />

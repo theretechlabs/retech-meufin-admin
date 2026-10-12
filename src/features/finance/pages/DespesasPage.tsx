@@ -55,6 +55,7 @@ import {
   createEntry,
   uploadEntryAttachment,
   formatCents,
+  getEntriesSummary,
   listEntries,
   listFamilyMembers,
   listSuppliers,
@@ -134,10 +135,13 @@ const initialFilters: Filters = {
 function StatCard({
   label,
   value,
+  hint,
   color,
 }: {
   label: string
   value: string
+  /** Uma linha explicando o recorte (eixo, contagem). Evita a leitura errada do número. */
+  hint?: string
   color?: string
 }) {
   return (
@@ -149,6 +153,11 @@ function StatCard({
         <Typography variant="h5" sx={{ fontWeight: 800, color, mt: 0.5 }}>
           {value}
         </Typography>
+        {hint && (
+          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+            {hint}
+          </Typography>
+        )}
       </CardContent>
     </Card>
   )
@@ -1430,22 +1439,25 @@ export default function DespesasPage() {
   const discountReasonName = (slug?: string | null) =>
     (discountReasonsQuery.data ?? []).find((r) => r.slug === slug)?.name ?? slug ?? '—'
 
-  const stats = useMemo(() => {
-    let previsto = 0
-    let realizado = 0
-    let countPrevista = 0
-    let countRealizada = 0
-    for (const e of entries) {
-      if (e.status === 'prevista') {
-        previsto += e.amount_cents
-        countPrevista += 1
-      } else if (e.status === 'realizada') {
-        realizado += e.amount_cents
-        countRealizada += 1
-      }
-    }
-    return { previsto, realizado, countPrevista, countRealizada }
-  }, [entries])
+  // Cards vêm da API, nos dois eixos, pelo mês/ano/membro — NÃO somam a
+  // página visível (paginada em {pageSize}) e ignoram status/categoria/busca,
+  // que só filtram a lista. Mesma fonte da dashboard: os números batem por
+  // construção.
+  const summaryParams = useMemo(
+    () => ({
+      kind: 'debit' as const,
+      year: filters.year,
+      month: filters.month,
+      family_member_id: filters.family_member_id || undefined,
+    }),
+    [filters.year, filters.month, filters.family_member_id]
+  )
+  const summaryQ = useQuery({
+    queryKey: financeKeys.entriesSummary(summaryParams),
+    queryFn: () => getEntriesSummary(summaryParams),
+  })
+  const summary = summaryQ.data
+  const monthLabel = MONTH_OPTIONS.find((o) => o.value === filters.month)?.label ?? ''
 
   const openCreate = () => {
     setEditing(null)
@@ -1475,25 +1487,49 @@ export default function DespesasPage() {
 
       {/* Cards de resumo */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
+        {/* Eixo competência: o que VENCE no mês — é o que a lista abaixo mostra. */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            label="Previsto no mês"
-            value={formatCents(stats.previsto)}
-            color="warning.main"
+            label="Contas do mês"
+            value={formatCents(summary?.due.total_cents ?? 0)}
+            hint={
+              summary
+                ? `${summary.due.total_count} vencem em ${monthLabel} · sem canceladas`
+                : 'Carregando…'
+            }
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
           <StatCard
-            label="Realizado no mês"
-            value={formatCents(stats.realizado)}
+            label="Pago"
+            value={formatCents(summary?.due.paid_cents ?? 0)}
+            hint={
+              summary
+                ? `${summary.due.paid_count} de ${summary.due.total_count} · valor pago`
+                : 'Carregando…'
+            }
             color="error.main"
           />
         </Grid>
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="Previstas" value={String(stats.countPrevista)} />
+          <StatCard
+            label="A pagar"
+            value={formatCents(summary?.due.open_cents ?? 0)}
+            hint={summary ? `${summary.due.open_count} em aberto` : 'Carregando…'}
+            color="warning.main"
+          />
         </Grid>
+        {/* Eixo caixa: o que foi PAGO no mês, qualquer vencimento — o número da dashboard. */}
         <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard label="Realizadas" value={String(stats.countRealizada)} />
+          <StatCard
+            label="Saiu do caixa"
+            value={formatCents(summary?.cash.paid_cents ?? 0)}
+            hint={
+              summary
+                ? `${summary.cash.paid_count} pagamentos em ${monthLabel}, qualquer vencimento · igual à dashboard`
+                : 'Carregando…'
+            }
+          />
         </Grid>
       </Grid>
 

@@ -1515,6 +1515,44 @@ export async function getFinanceDashboard(params: {
   return data
 }
 
+/**
+ * Resumo de um kind (despesa/receita) no mês, nos DOIS eixos:
+ * - due  (competência): lançamentos que VENCEM no mês. É o que a lista de
+ *   Despesas/Receitas mostra, então os cards dela seguem este eixo.
+ * - cash (caixa): lançamentos PAGOS no mês, qualquer vencimento. É o mesmo
+ *   número que a dashboard chama de realizado.
+ * Valores pagos usam o valor efetivamente pago (desconto/juros contam).
+ */
+export type EntrySummary = {
+  kind: 'debit' | 'credit'
+  year: number
+  month: number
+  due: {
+    total_cents: number
+    total_count: number
+    paid_cents: number
+    paid_count: number
+    open_cents: number
+    open_count: number
+  }
+  cash: {
+    paid_cents: number
+    paid_count: number
+  }
+}
+
+export async function getEntriesSummary(params: {
+  kind: 'debit' | 'credit'
+  year: number
+  month: number
+  family_member_id?: string
+}): Promise<EntrySummary> {
+  const { data } = await meufinClient.get<EntrySummary>(`${BASE}/dashboard/entries-summary`, {
+    params,
+  })
+  return data
+}
+
 export type CashFlowMonth = {
   month: number
   inflow_cents: number
