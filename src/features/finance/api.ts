@@ -1489,6 +1489,9 @@ export type DashboardSummary = {
   balance_expected_cents: number
   receivable_cents: number
   payable_cents: number
+  /** Juros e multa pagos no mês (eixo caixa, despesas) e quantos pagamentos tiveram encargo. */
+  expense_late_charges_cents: number
+  expense_late_charges_count: number
   categories: { category: string; total_cents: number }[]
   future_installments: {
     total_cents: number
@@ -1534,10 +1537,16 @@ export type EntrySummary = {
     paid_count: number
     open_cents: number
     open_count: number
+    /** Juros + multa das realizadas que vencem no mês; count = quantas tiveram encargo. */
+    late_charges_cents: number
+    late_charges_count: number
   }
   cash: {
     paid_cents: number
     paid_count: number
+    /** Juros + multa dos pagamentos feitos no mês — "quanto perdi por atrasar". */
+    late_charges_cents: number
+    late_charges_count: number
   }
 }
 

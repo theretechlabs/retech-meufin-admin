@@ -17,6 +17,7 @@ import AccountBalanceWalletRoundedIcon from '@mui/icons-material/AccountBalanceW
 import CallReceivedRoundedIcon from '@mui/icons-material/CallReceivedRounded'
 import CallMadeRoundedIcon from '@mui/icons-material/CallMadeRounded'
 import EventRepeatRoundedIcon from '@mui/icons-material/EventRepeatRounded'
+import PercentRoundedIcon from '@mui/icons-material/PercentRounded'
 import { useQuery } from '@tanstack/react-query'
 import {
   Bar,
@@ -319,6 +320,19 @@ export default function FinanceDashboardPage() {
               mainCents={s?.future_installments.total_cents ?? 0}
               icon={EventRepeatRoundedIcon}
               tone="warning"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <MoneyCard
+              title="Juros e multa pagos no mês"
+              mainCents={s?.expense_late_charges_cents ?? 0}
+              secondary={
+                (s?.expense_late_charges_count ?? 0) > 0
+                  ? `${s?.expense_late_charges_count} ${s?.expense_late_charges_count === 1 ? 'pagamento' : 'pagamentos'} com atraso · perdido por atrasar`
+                  : 'Nenhum pagamento com atraso'
+              }
+              icon={PercentRoundedIcon}
+              tone={(s?.expense_late_charges_cents ?? 0) > 0 ? 'error' : 'info'}
             />
           </Grid>
 

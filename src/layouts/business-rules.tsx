@@ -193,6 +193,7 @@ export const businessRules: Record<string, BusinessRule> = {
           'A pagar / A receber = o que vence no mês e ainda está previsto.',
           'Liquidação por compensação (ex.: usado abatido na troca) fica fora do caixa: nenhum dinheiro passou.',
           'Parcelas futuras somam parcelas previstas que vencem após o mês selecionado.',
+          'Juros e multa pagos = encargos registrados nas despesas pagas no mês (eixo caixa): o que a família perdeu por atrasar.',
           'Os mesmos números aparecem nos cards de Despesas e Receitas — vêm da mesma fonte.',
         ],
       },

@@ -710,7 +710,7 @@ export default function ReceitasPage() {
       {/* Cards de resumo */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* Eixo competência: o que VENCE no mês — é o que a lista abaixo mostra. */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Receitas do mês"
             value={formatCents(summary?.due.total_cents ?? 0)}
@@ -721,7 +721,7 @@ export default function ReceitasPage() {
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Recebido"
             value={formatCents(summary?.due.paid_cents ?? 0)}
@@ -733,7 +733,7 @@ export default function ReceitasPage() {
             color="success.main"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="A receber"
             value={formatCents(summary?.due.open_cents ?? 0)}
@@ -742,7 +742,7 @@ export default function ReceitasPage() {
           />
         </Grid>
         {/* Eixo caixa: o que foi PAGO no mês, qualquer vencimento — o número da dashboard. */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Entrou no caixa"
             value={formatCents(summary?.cash.paid_cents ?? 0)}
@@ -751,6 +751,21 @@ export default function ReceitasPage() {
                 ? `${summary.cash.paid_count} recebimentos em ${monthLabel}, qualquer vencimento · igual à dashboard`
                 : 'Carregando…'
             }
+          />
+        </Grid>
+        {/* Indicador: juros e multa que entraram a mais por atraso de quem pagou. */}
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+          <StatCard
+            label="Juros e multa recebidos"
+            value={formatCents(summary?.cash.late_charges_cents ?? 0)}
+            hint={
+              summary
+                ? summary.cash.late_charges_count > 0
+                  ? `${summary.cash.late_charges_count} ${summary.cash.late_charges_count === 1 ? 'recebimento' : 'recebimentos'} com atraso em ${monthLabel}`
+                  : `Nenhum encargo recebido em ${monthLabel}`
+                : 'Carregando…'
+            }
+            color={(summary?.cash.late_charges_cents ?? 0) > 0 ? 'success.main' : undefined}
           />
         </Grid>
       </Grid>
