@@ -5,7 +5,6 @@ import {
   Card,
   Chip,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -13,11 +12,11 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { AttachFileButton } from '@/components/common/AttachFileButton'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import FolderSharedRoundedIcon from '@mui/icons-material/FolderSharedRounded'
@@ -30,30 +29,18 @@ import {
   uploadDocument,
   type HealthDocument,
 } from '../api'
-import { errorMessage, healthKeys } from '../constants'
+import {
+  errorMessage,
+  HEALTH_DOC_TYPE_LABEL,
+  HEALTH_DOC_TYPE_OPTIONS,
+  healthKeys,
+} from '../constants'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { useToast } from '@/providers/ToastProvider'
 import { formatDateTimeBR } from '@/utils/dates'
-
-// Tipos VÁLIDOS no backend (dom.ValidDocumentType) — chave fora da lista
-// derruba o upload com "document_type inválido".
-const DOC_TYPE_LABEL: Record<string, string> = {
-  exam_result: 'Resultado de exame',
-  exam_request: 'Solicitação',
-  image_report: 'Exame de imagem',
-  medical_report: 'Laudo médico',
-  prescription: 'Receita',
-  other: 'Outro',
-}
-
-const DOC_TYPE_OPTIONS = Object.entries(DOC_TYPE_LABEL).map(([value, label]) => ({ value, label }))
-
-function docTypeLabel(t: string): string {
-  return DOC_TYPE_LABEL[t] ?? t
-}
 
 function formatSize(bytes?: number | null): string {
   if (!bytes) return '—'
@@ -136,61 +123,43 @@ export default function HealthDocumentsPage() {
 
       <Card sx={{ p: 2, mb: 2.5 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={1.5} alignItems={{ md: 'center' }}>
-          <TextField
-            select
-            size="small"
+          <AutocompleteField
             label="Membro"
-            value={memberId}
-            onChange={(e) => {
-              setMemberId(e.target.value)
-              setPage(0)
-            }}
+            size="small"
+            fullWidth={false}
             sx={{ minWidth: 200 }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {members.map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.full_name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            size="small"
-            label="Tipo"
-            value={docType}
-            onChange={(e) => {
-              setDocType(e.target.value)
+            emptyLabel="Todos"
+            value={memberId}
+            onChange={(v) => {
+              setMemberId(v)
               setPage(0)
             }}
-            sx={{ minWidth: 180 }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {DOC_TYPE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <Box sx={{ flex: 1 }} />
-          <TextField
-            select
+            options={members.map((m) => ({ value: m.id, label: m.full_name }))}
+          />
+          <AutocompleteField
+            label="Tipo"
             size="small"
-            label="Tipo do upload"
-            value={uploadType}
-            onChange={(e) => setUploadType(e.target.value)}
+            fullWidth={false}
             sx={{ minWidth: 180 }}
-          >
-            {DOC_TYPE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todos"
+            value={docType}
+            onChange={(v) => {
+              setDocType(v)
+              setPage(0)
+            }}
+            options={HEALTH_DOC_TYPE_OPTIONS}
+          />
+          <Box sx={{ flex: 1 }} />
+          <AutocompleteField
+            label="Tipo do upload"
+            size="small"
+            fullWidth={false}
+            sx={{ minWidth: 180 }}
+            value={uploadType}
+            onChange={setUploadType}
+            options={HEALTH_DOC_TYPE_OPTIONS}
+            disableClearable
+          />
           <AttachFileButton
             fullWidth={false}
             label="Enviar arquivo"
@@ -245,7 +214,7 @@ export default function HealthDocumentsPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={docTypeLabel(d.document_type)} />
+                      <Chip size="small" variant="outlined" label={HEALTH_DOC_TYPE_LABEL[d.document_type] ?? d.document_type} />
                     </TableCell>
                     <TableCell>{memberName(d.family_member_id)}</TableCell>
                     <TableCell>

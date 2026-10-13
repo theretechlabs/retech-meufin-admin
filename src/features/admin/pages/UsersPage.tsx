@@ -3,18 +3,11 @@ import {
   Box,
   Button,
   Card,
-  Checkbox,
   Chip,
   Dialog,
   DialogActions,
   DialogContent,
   DialogTitle,
-  FormControl,
-  InputLabel,
-  ListItemText,
-  MenuItem,
-  OutlinedInput,
-  Select,
   Stack,
   Table,
   TableBody,
@@ -28,6 +21,9 @@ import {
   InputAdornment,
 } from '@mui/material'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { MultiAutocompleteField } from '@/components/fields/MultiAutocompleteField'
+import { ACTIVE_FILTER_OPTIONS, type AutocompleteOption } from '@/components/fields/options'
 import VisibilityRoundedIcon from '@mui/icons-material/VisibilityRounded'
 import VisibilityOffRoundedIcon from '@mui/icons-material/VisibilityOffRounded'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
@@ -62,6 +58,11 @@ import { useToast } from '@/providers/ToastProvider'
 
 function isMaster(u: AdminUser): boolean {
   return u.roles?.some((r) => r.code === 'master') ?? false
+}
+
+/** Opções de grupo para seleção múltipla: nome como rótulo, código como descrição. */
+function roleOptions(roles: Role[]): AutocompleteOption[] {
+  return roles.map((r) => ({ value: r.id, label: r.name, description: r.code }))
 }
 
 // ---------------------------------------------------------------------------
@@ -176,33 +177,12 @@ function CreateUserDialog({
             name="role_ids"
             control={control}
             render={({ field }) => (
-              <FormControl fullWidth>
-                <InputLabel id="create-roles-label">Grupos</InputLabel>
-                <Select
-                  labelId="create-roles-label"
-                  multiple
-                  value={field.value}
-                  onChange={(e) =>
-                    field.onChange(
-                      typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value
-                    )
-                  }
-                  input={<OutlinedInput label="Grupos" />}
-                  renderValue={(selected) =>
-                    roles
-                      .filter((r) => (selected as string[]).includes(r.id))
-                      .map((r) => r.name)
-                      .join(', ')
-                  }
-                >
-                  {roles.map((r) => (
-                    <MenuItem key={r.id} value={r.id}>
-                      <Checkbox checked={field.value.includes(r.id)} />
-                      <ListItemText primary={r.name} secondary={r.code} />
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
+              <MultiAutocompleteField
+                label="Grupos"
+                value={field.value}
+                onChange={field.onChange}
+                options={roleOptions(roles)}
+              />
             )}
           />
         </Stack>
@@ -312,33 +292,12 @@ function AssignRolesDialog({
       <DialogContent>
         <Stack spacing={2.5} sx={{ mt: 1 }}>
           {mutation.isError && <ErrorState message={errorMessage(mutation.error)} />}
-          <FormControl fullWidth>
-            <InputLabel id="assign-roles-label">Grupos</InputLabel>
-            <Select
-              labelId="assign-roles-label"
-              multiple
-              value={selected}
-              onChange={(e) =>
-                setSelected(
-                  typeof e.target.value === 'string' ? e.target.value.split(',') : e.target.value
-                )
-              }
-              input={<OutlinedInput label="Grupos" />}
-              renderValue={(sel) =>
-                roles
-                  .filter((r) => (sel as string[]).includes(r.id))
-                  .map((r) => r.name)
-                  .join(', ')
-              }
-            >
-              {roles.map((r) => (
-                <MenuItem key={r.id} value={r.id}>
-                  <Checkbox checked={selected.includes(r.id)} />
-                  <ListItemText primary={r.name} secondary={r.code} />
-                </MenuItem>
-              ))}
-            </Select>
-          </FormControl>
+          <MultiAutocompleteField
+            label="Grupos"
+            value={selected}
+            onChange={setSelected}
+            options={roleOptions(roles)}
+          />
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -567,33 +526,26 @@ export default function UsersPage() {
             size="small"
             fullWidth
           />
-          <TextField
-            select
+          <AutocompleteField
             label="Status"
+            size="small"
+            emptyLabel="Todos"
             value={filters.active}
-            onChange={(e) => updateFilter({ active: e.target.value as Filters['active'] })}
-            size="small"
+            onChange={(v) => updateFilter({ active: v as Filters['active'] })}
+            options={ACTIVE_FILTER_OPTIONS}
+            fullWidth={false}
             sx={{ minWidth: 160 }}
-          >
-            <MenuItem value="">Todos</MenuItem>
-            <MenuItem value="true">Ativos</MenuItem>
-            <MenuItem value="false">Inativos</MenuItem>
-          </TextField>
-          <TextField
-            select
+          />
+          <AutocompleteField
             label="Grupo"
-            value={filters.role}
-            onChange={(e) => updateFilter({ role: e.target.value })}
             size="small"
+            emptyLabel="Todos"
+            value={filters.role}
+            onChange={(v) => updateFilter({ role: v })}
+            options={roles.map((r) => ({ value: r.code, label: r.name }))}
+            fullWidth={false}
             sx={{ minWidth: 200 }}
-          >
-            <MenuItem value="">Todos</MenuItem>
-            {roles.map((r) => (
-              <MenuItem key={r.id} value={r.code}>
-                {r.name}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
         </Stack>
       </Card>
 

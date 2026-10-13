@@ -1,4 +1,13 @@
-import { Autocomplete, Checkbox, Chip, TextField, Typography, Stack } from '@mui/material'
+import {
+  Autocomplete,
+  Checkbox,
+  Chip,
+  TextField,
+  Typography,
+  Stack,
+  type SxProps,
+  type Theme,
+} from '@mui/material'
 import { matchesOption, normalizeSearch, type AutocompleteOption } from './options'
 
 /**
@@ -18,6 +27,7 @@ export function MultiAutocompleteField({
   error,
   helperText,
   limitTags = 3,
+  sx,
 }: {
   options: AutocompleteOption[]
   value: string[]
@@ -31,6 +41,7 @@ export function MultiAutocompleteField({
   error?: boolean
   helperText?: string
   limitTags?: number
+  sx?: SxProps<Theme>
 }) {
   const selected = options.filter((o) => value.includes(o.value))
 
@@ -47,6 +58,7 @@ export function MultiAutocompleteField({
       disabled={disabled}
       size={size}
       fullWidth={fullWidth}
+      sx={sx}
       noOptionsText="Nada encontrado"
       filterOptions={(opts, state) => {
         const q = normalizeSearch(state.inputValue.trim())

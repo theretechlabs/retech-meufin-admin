@@ -8,7 +8,6 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -20,6 +19,7 @@ import {
   Typography,
 } from '@mui/material'
 import { AttachFileButton } from '@/components/common/AttachFileButton'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import DescriptionRoundedIcon from '@mui/icons-material/DescriptionRounded'
@@ -119,13 +119,14 @@ export function PropertyDocumentsDialog({
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <TextField {...field} select label="Tipo de documento" fullWidth required>
-                    {PROPERTY_DOC_TYPE_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  <AutocompleteField
+                    label="Tipo de documento"
+                    required
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={PROPERTY_DOC_TYPE_OPTIONS}
+                    disableClearable
+                  />
                 )}
               />
               <Controller

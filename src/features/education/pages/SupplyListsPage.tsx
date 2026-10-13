@@ -13,7 +13,6 @@ import {
   DialogTitle,
   Grid,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -47,6 +46,7 @@ import {
 } from '../api'
 import {
   centsToReais,
+  CURRENT_YEAR,
   educationKeys,
   errorMessage,
   formatCents,
@@ -60,8 +60,9 @@ import {
 } from '../constants'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
-
-const CURRENT_YEAR = new Date().getFullYear()
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
+import { useSchoolYears } from '../hooks/useSchoolYears'
 
 /** Diferença referência × pago de um item comprado, em centavos (positivo = economia). */
 function itemSavingsCents(item: SupplyItem): number | null {
@@ -117,20 +118,16 @@ function AddItemRow({ listId }: { listId: string }) {
         onChange={(e) => setName(e.target.value)}
         sx={{ flex: 1, minWidth: 160 }}
       />
-      <TextField
-        select
-        size="small"
+      <AutocompleteField
         label="Categoria"
+        size="small"
         value={category}
-        onChange={(e) => setCategory(e.target.value as ItemCategory)}
+        onChange={(v) => setCategory(v as ItemCategory)}
+        options={ITEM_CATEGORY_OPTIONS}
+        disableClearable
+        fullWidth={false}
         sx={{ minWidth: 130 }}
-      >
-        {ITEM_CATEGORY_OPTIONS.map((o) => (
-          <MenuItem key={o.value} value={o.value}>
-            {o.label}
-          </MenuItem>
-        ))}
-      </TextField>
+      />
       <TextField
         size="small"
         type="number"
@@ -331,20 +328,16 @@ function SupplyListCard({
           justifyContent="flex-end"
           sx={{ px: 2, py: 1 }}
         >
-          <TextField
-            select
-            size="small"
+          <AutocompleteField
             label="Status"
+            size="small"
             value={list.status}
-            onChange={(e) => changeStatus.mutate(e.target.value as ListStatus)}
+            onChange={(v) => changeStatus.mutate(v as ListStatus)}
+            options={LIST_STATUS_OPTIONS}
+            disableClearable
+            fullWidth={false}
             sx={{ minWidth: 150 }}
-          >
-            {LIST_STATUS_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
           <Tooltip title="Excluir lista">
             <IconButton
               color="error"
@@ -466,12 +459,7 @@ export default function SupplyListsPage() {
     queryFn: () => listSupplyLists(params),
   })
   const lists = data ?? []
-
-  const years = useMemo(() => {
-    const set = new Set<number>([CURRENT_YEAR])
-    enrollments.forEach((e) => set.add(e.school_year))
-    return Array.from(set).sort((a, b) => b - a)
-  }, [enrollments])
+  const years = useSchoolYears()
 
   const createMutation = useMutation({
     mutationFn: () =>
@@ -508,36 +496,26 @@ export default function SupplyListsPage() {
       />
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }} flexWrap="wrap" useFlexGap>
-        <TextField
-          select
-          size="small"
+        <AutocompleteField
           label="Ano letivo"
-          value={yearFilter}
-          onChange={(e) => setYearFilter(e.target.value === '' ? '' : Number(e.target.value))}
-          sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="">Todos os anos</MenuItem>
-          {years.map((y) => (
-            <MenuItem key={y} value={y}>
-              {y}
-            </MenuItem>
-          ))}
-        </TextField>
-        <TextField
-          select
           size="small"
-          label="Status"
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
+          emptyLabel="Todos os anos"
+          value={yearFilter === '' ? '' : String(yearFilter)}
+          onChange={(v) => setYearFilter(v === '' ? '' : Number(v))}
+          options={numericOptions(years)}
+          fullWidth={false}
           sx={{ minWidth: 150 }}
-        >
-          <MenuItem value="">Todos</MenuItem>
-          {LIST_STATUS_OPTIONS.map((o) => (
-            <MenuItem key={o.value} value={o.value}>
-              {o.label}
-            </MenuItem>
-          ))}
-        </TextField>
+        />
+        <AutocompleteField
+          label="Status"
+          size="small"
+          emptyLabel="Todos"
+          value={statusFilter}
+          onChange={setStatusFilter}
+          options={LIST_STATUS_OPTIONS}
+          fullWidth={false}
+          sx={{ minWidth: 150 }}
+        />
       </Stack>
 
       {enrollments.length === 0 && !enrollmentsQuery.isLoading && (
@@ -591,19 +569,16 @@ export default function SupplyListsPage() {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0 }}>
             <Grid size={{ xs: 12 }}>
-              <TextField
-                select
-                fullWidth
+              <AutocompleteField
                 label="Matrícula"
                 value={newEnrollmentId}
-                onChange={(e) => setNewEnrollmentId(e.target.value)}
-              >
-                {enrollments.map((en) => (
-                  <MenuItem key={en.id} value={en.id}>
-                    {en.member_name ?? 'Membro'} · {en.school_year} · {STAGE_LABEL[en.stage] ?? en.stage}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={setNewEnrollmentId}
+                options={enrollments.map((en) => ({
+                  value: en.id,
+                  label: `${en.member_name ?? 'Membro'} · ${en.school_year} · ${STAGE_LABEL[en.stage] ?? en.stage}`,
+                }))}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <TextField

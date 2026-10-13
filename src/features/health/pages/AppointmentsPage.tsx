@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   alpha,
-  Autocomplete,
   Box,
   Button,
   Card,
@@ -14,7 +13,6 @@ import {
   Divider,
   Grid,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -56,7 +54,6 @@ import {
   type AppointmentInput,
   type AppointmentKind,
   type AppointmentStatus,
-  type Lab,
 } from '../api'
 import {
   APPOINTMENT_KIND_LABEL,
@@ -74,6 +71,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 // Lê a data/hora ISO (armazenada em UTC) preservando o horário informado.
 function fmtDateTime(iso?: string | null): string {
@@ -150,7 +148,7 @@ type AppointmentFormValues = {
   kind: AppointmentKind
   specialty: string
   professional_name: string
-  lab: Lab | null
+  lab_id: string
   plan_id: string
   price: string
   scheduled_at: string
@@ -164,7 +162,7 @@ function emptyForm(): AppointmentFormValues {
     kind: 'consulta',
     specialty: '',
     professional_name: '',
-    lab: null,
+    lab_id: '',
     plan_id: '',
     price: '',
     scheduled_at: '',
@@ -204,7 +202,7 @@ function AppointmentFormDialog({
       kind: appointment.kind,
       specialty: appointment.specialty ?? '',
       professional_name: appointment.professional_name ?? '',
-      lab: null, // resolvido abaixo via effect de options
+      lab_id: appointment.lab_id ?? '',
       plan_id: appointment.plan_id ?? '',
       price: appointment.price_cents ? (appointment.price_cents / 100).toString() : '',
       scheduled_at: toInputValue(appointment.scheduled_at),
@@ -213,13 +211,6 @@ function AppointmentFormDialog({
     }
   })
   const [formError, setFormError] = useState<string | null>(null)
-
-  // Resolve o objeto Lab quando os labs chegam (para o Autocomplete em edição).
-  const resolvedLab = useMemo(() => {
-    if (form.lab) return form.lab
-    if (appointment?.lab_id && labs) return labs.find((l) => l.id === appointment.lab_id) ?? null
-    return null
-  }, [form.lab, appointment?.lab_id, labs])
 
   // Planos disponíveis para o membro selecionado (+ vínculos).
   const memberPlans = useMemo(() => {
@@ -257,7 +248,7 @@ function AppointmentFormDialog({
       kind: form.kind,
       specialty: form.specialty || null,
       professional_name: form.professional_name.trim() || null,
-      lab_id: resolvedLab?.id ?? null,
+      lab_id: form.lab_id || null,
       plan_id: form.plan_id || null,
       exam_request_id: form.exam_request_id || null,
       scheduled_at: form.scheduled_at,
@@ -278,20 +269,14 @@ function AppointmentFormDialog({
           {mutation.isError && <ErrorState message={errorMessage(mutation.error)} />}
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
+            <AutocompleteField
               label="Membro da família"
               value={form.family_member_id}
-              onChange={(e) => patch({ family_member_id: e.target.value, plan_id: '', exam_request_id: '' })}
-              fullWidth
+              onChange={(v) => patch({ family_member_id: v, plan_id: '', exam_request_id: '' })}
+              options={(members ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
               required
-            >
-              {(members ?? []).map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.full_name}
-                </MenuItem>
-              ))}
-            </TextField>
+              disableClearable
+            />
             <TextField
               type="datetime-local"
               label="Data e hora"
@@ -304,35 +289,20 @@ function AppointmentFormDialog({
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
+            <AutocompleteField
               label="Tipo"
               value={form.kind}
-              onChange={(e) => patch({ kind: e.target.value as AppointmentKind })}
-              fullWidth
-            >
-              {APPOINTMENT_KIND_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              onChange={(v) => patch({ kind: v as AppointmentKind })}
+              options={APPOINTMENT_KIND_OPTIONS}
+              disableClearable
+            />
+            <AutocompleteField
               label="Especialidade"
+              emptyLabel="Não informada"
               value={form.specialty}
-              onChange={(e) => patch({ specialty: e.target.value })}
-              fullWidth
-            >
-              <MenuItem value="">
-                <em>Não informada</em>
-              </MenuItem>
-              {SPECIALTY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={(v) => patch({ specialty: v })}
+              options={SPECIALTY_OPTIONS}
+            />
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -343,36 +313,26 @@ function AppointmentFormDialog({
               fullWidth
               placeholder="Nome do médico ou profissional"
             />
-            <Autocomplete
-              options={labs ?? []}
-              value={resolvedLab}
-              onChange={(_, v) => patch({ lab: v })}
-              getOptionLabel={(o) => o.name}
-              isOptionEqualToValue={(o, v) => o.id === v.id}
-              fullWidth
-              renderInput={(params) => <TextField {...params} label="Local" />}
+            <AutocompleteField
+              label="Local"
+              value={form.lab_id}
+              onChange={(v) => patch({ lab_id: v })}
+              options={(labs ?? []).map((l) => ({ value: l.id, label: l.name }))}
             />
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
+            <AutocompleteField
               label="Cobertura"
+              emptyLabel="Particular"
               value={form.plan_id}
-              onChange={(e) => patch({ plan_id: e.target.value })}
-              fullWidth
+              onChange={(v) => patch({ plan_id: v })}
+              options={memberPlans.map((p) => ({
+                value: p.id,
+                label: p.operator ? `${p.name} · ${p.operator}` : p.name,
+              }))}
               helperText={form.plan_id ? 'Coberto por plano (valor = coparticipação)' : 'Particular'}
-            >
-              <MenuItem value="">
-                <em>Particular</em>
-              </MenuItem>
-              {memberPlans.map((p) => (
-                <MenuItem key={p.id} value={p.id}>
-                  {p.name}
-                  {p.operator ? ` · ${p.operator}` : ''}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
             <TextField
               label="Valor (R$)"
               value={form.price}
@@ -383,22 +343,16 @@ function AppointmentFormDialog({
             />
           </Stack>
 
-          <TextField
-            select
+          <AutocompleteField
             label="Vincular a pedido de exame (opcional)"
+            emptyLabel="Nenhum"
             value={form.exam_request_id}
-            onChange={(e) => patch({ exam_request_id: e.target.value })}
-            fullWidth
-          >
-            <MenuItem value="">
-              <em>Nenhum</em>
-            </MenuItem>
-            {memberExamRequests.map((r) => (
-              <MenuItem key={r.id} value={r.id}>
-                Pedido de {r.request_date} · {r.items?.length ?? 0} exame(s)
-              </MenuItem>
-            ))}
-          </TextField>
+            onChange={(v) => patch({ exam_request_id: v })}
+            options={memberExamRequests.map((r) => ({
+              value: r.id,
+              label: `Pedido de ${r.request_date} · ${r.items?.length ?? 0} exame(s)`,
+            }))}
+          />
 
           <TextField
             label="Motivo / sintomas"
@@ -611,57 +565,36 @@ export default function AppointmentsPage() {
 
       <Card sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap" useFlexGap>
-          <TextField
-            select
+          <AutocompleteField
             label="Membro"
-            value={memberId}
-            onChange={(e) => setMemberId(e.target.value)}
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { md: 180 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {(members ?? []).map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.full_name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
+            emptyLabel="Todos"
+            value={memberId}
+            onChange={setMemberId}
+            options={(members ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+          />
+          <AutocompleteField
             label="Status"
+            size="small"
+            fullWidth={false}
+            sx={{ minWidth: { md: 160 } }}
+            emptyLabel="Todos"
             value={status}
-            onChange={(e) => setStatus(e.target.value as AppointmentStatus | '')}
-            size="small"
-            sx={{ minWidth: { md: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {APPOINTMENT_STATUS_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
+            onChange={(v) => setStatus(v as AppointmentStatus | '')}
+            options={APPOINTMENT_STATUS_OPTIONS}
+          />
+          <AutocompleteField
             label="Tipo"
-            value={kind}
-            onChange={(e) => setKind(e.target.value as AppointmentKind | '')}
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { md: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {APPOINTMENT_KIND_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todos"
+            value={kind}
+            onChange={(v) => setKind(v as AppointmentKind | '')}
+            options={APPOINTMENT_KIND_OPTIONS}
+          />
           <TextField
             type="date"
             label="De"

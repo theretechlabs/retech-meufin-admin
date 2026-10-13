@@ -1,3 +1,4 @@
+import { optionsFromLabels } from '@/components/fields/options'
 import type {
   HomeSafetyCategory,
   HomeSafetyEventType,
@@ -95,6 +96,9 @@ export const STATUS_LABEL: Record<HomeSafetyStatus, string> = {
   ok: 'Em dia',
   sem_controle: 'Sem controle',
 }
+
+/** Opções do filtro de status da listagem (status é calculado pela API, não editável). */
+export const STATUS_FILTER_OPTIONS = optionsFromLabels(STATUS_LABEL)
 
 export const STATUS_COLOR: Record<HomeSafetyStatus, 'error' | 'warning' | 'info' | 'success' | 'default'> = {
   vencido: 'error',

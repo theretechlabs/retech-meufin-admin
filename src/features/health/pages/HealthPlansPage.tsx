@@ -13,7 +13,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -58,6 +57,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { PlanDocumentsDialog } from '../components/PlanDocumentsDialog'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/)
@@ -164,19 +164,13 @@ function PlanFormDialog({
               fullWidth
               placeholder="Unimed, Amil, Bradesco…"
             />
-            <TextField
-              select
+            <AutocompleteField
               label="Modalidade"
               value={form.plan_type}
-              onChange={(e) => patch({ plan_type: e.target.value as PlanType })}
-              fullWidth
-            >
-              {PLAN_TYPE_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={(v) => patch({ plan_type: v as PlanType })}
+              options={PLAN_TYPE_OPTIONS}
+              disableClearable
+            />
           </Stack>
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
             <TextField

@@ -11,7 +11,6 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -46,6 +45,7 @@ import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 type FormValues = {
   canonical_name: string
@@ -170,21 +170,16 @@ function MarkerFormDialog({
               control={control}
               rules={{ required: 'Informe a categoria' }}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
+                <AutocompleteField
                   label="Categoria"
-                  fullWidth
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={MARKER_CATEGORIES}
                   required
+                  disableClearable
                   error={Boolean(errors.category)}
                   helperText={errors.category?.message}
-                >
-                  {MARKER_CATEGORIES.map((c) => (
-                    <MenuItem key={c.value} value={c.value}>
-                      {c.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                />
               )}
             />
             <Controller
@@ -314,26 +309,19 @@ export default function MarkersPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Categoria"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 220 } }}
-          >
-            <MenuItem value="">
-              <em>Todas</em>
-            </MenuItem>
-            {MARKER_CATEGORIES.map((c) => (
-              <MenuItem key={c.value} value={c.value}>
-                {c.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todas"
+            value={category}
+            onChange={(v) => {
+              setCategory(v)
+              setPage(0)
+            }}
+            options={MARKER_CATEGORIES}
+          />
         </Stack>
       </Card>
 

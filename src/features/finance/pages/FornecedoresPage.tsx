@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -183,13 +182,14 @@ function SupplierFormDialog({
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
-              <TextField {...field} select label="Categoria" fullWidth required>
-                {SUPPLIER_CATEGORY_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <AutocompleteField
+                label="Categoria"
+                required
+                value={field.value}
+                onChange={field.onChange}
+                options={SUPPLIER_CATEGORY_OPTIONS}
+                disableClearable
+              />
             )}
           />
           <Controller

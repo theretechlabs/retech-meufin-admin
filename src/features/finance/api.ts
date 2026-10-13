@@ -1824,6 +1824,11 @@ export async function listSuppliersPaged(params: {
   return data
 }
 
+export async function getSupplier(id: string): Promise<Supplier> {
+  const { data } = await meufinClient.get<Supplier>(`${BASE}/suppliers/${id}`)
+  return data
+}
+
 export async function createSupplier(input: SupplierInput): Promise<Supplier> {
   const { data } = await meufinClient.post<Supplier>(`${BASE}/suppliers`, input)
   return data

@@ -11,7 +11,6 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   FormControlLabel,
@@ -46,6 +45,8 @@ import {
 } from '../api'
 import { AvatarCropDialog } from '@/components/common/AvatarCropDialog'
 import { DecimalField, formatDecimalBR, parseDecimalBR } from '@/components/fields/DecimalField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { ACTIVE_FILTER_OPTIONS } from '@/components/fields/options'
 import { errorMessage, GENDER_OPTIONS, healthKeys, RELATIONSHIP_LABEL, RELATIONSHIP_OPTIONS } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '../components/PageHeader'
@@ -278,13 +279,14 @@ function MemberFormDialog({
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} select label="Parentesco" fullWidth required>
-                  {RELATIONSHIP_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Parentesco"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={RELATIONSHIP_OPTIONS}
+                  required
+                  disableClearable
+                />
               )}
             />
             <Controller
@@ -310,16 +312,13 @@ function MemberFormDialog({
               name="gender"
               control={control}
               render={({ field }) => (
-                <TextField {...field} value={field.value ?? ''} select label="Gênero" fullWidth>
-                  <MenuItem value="">
-                    <em>Não informado</em>
-                  </MenuItem>
-                  {GENDER_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Gênero"
+                  emptyLabel="Não informado"
+                  value={field.value ?? ''}
+                  onChange={field.onChange}
+                  options={GENDER_OPTIONS}
+                />
               )}
             />
             <Controller
@@ -475,43 +474,32 @@ export default function FamilyMembersPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={relationship}
-            onChange={(e) => {
-              setRelationship(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Parentesco"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {RELATIONSHIP_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
+            emptyLabel="Todos"
+            value={relationship}
+            onChange={(v) => {
+              setRelationship(v)
               setPage(0)
             }}
+            options={RELATIONSHIP_OPTIONS}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            <MenuItem value="true">Ativos</MenuItem>
-            <MenuItem value="false">Arquivados</MenuItem>
-          </TextField>
+            emptyLabel="Todos"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ACTIVE_FILTER_OPTIONS}
+          />
         </Stack>
       </Card>
 

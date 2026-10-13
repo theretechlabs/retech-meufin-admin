@@ -283,16 +283,6 @@ export type CreateShareLinkInput = {
   expires_in_hours: number
 }
 
-export const SHARE_TTL_OPTIONS = [
-  { value: 1, label: '1 hora' },
-  { value: 6, label: '6 horas' },
-  { value: 12, label: '12 horas' },
-  { value: 24, label: '24 horas' },
-  { value: 48, label: '48 horas' },
-  { value: 72, label: '3 dias' },
-  { value: 168, label: '7 dias' },
-] as const
-
 export async function createShareLink(input: CreateShareLinkInput): Promise<ShareLink> {
   const { data } = await meufinClient.post<ShareLink>(`${BASE}/share-links`, input)
   return data
@@ -468,8 +458,11 @@ export type ListMarkersParams = {
   offset?: number
 }
 
-export async function listMarkers(params: ListMarkersParams = {}): Promise<Paginated<Marker>> {
-  const { data } = await meufinClient.get<Paginated<Marker>>(`${BASE}/markers`, { params })
+export async function listMarkers(
+  params: ListMarkersParams = {},
+  signal?: AbortSignal,
+): Promise<Paginated<Marker>> {
+  const { data } = await meufinClient.get<Paginated<Marker>>(`${BASE}/markers`, { params, signal })
   return data
 }
 

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
-  Autocomplete,
   Box,
   Button,
   Card,
@@ -13,7 +12,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -26,6 +24,7 @@ import {
   Typography,
 } from '@mui/material'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import EditRoundedIcon from '@mui/icons-material/EditRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
@@ -257,9 +256,9 @@ function VehicleFormDialog({
 
   const submit = handleSubmit((values) => mutation.mutate(values))
 
-  const selectedBrand = brandsQuery.data?.find((b) => b.codigo === fipeBrandCode) ?? null
-  const selectedModel = modelsQuery.data?.find((m) => String(m.codigo) === fipeModelCode) ?? null
-  const selectedYear = yearsQuery.data?.find((y) => y.codigo === fipeYearCode) ?? null
+  const brandOptions = (brandsQuery.data ?? []).map((b) => ({ value: b.codigo, label: b.nome }))
+  const modelOptions = (modelsQuery.data ?? []).map((m) => ({ value: String(m.codigo), label: m.nome }))
+  const yearOptions = (yearsQuery.data ?? []).map((y) => ({ value: y.codigo, label: y.nome }))
 
   return (
     <Dialog open={open} onClose={mutation.isPending ? undefined : onClose} maxWidth="md" fullWidth>
@@ -281,26 +280,22 @@ function VehicleFormDialog({
                   name="fipe_vehicle_type"
                   control={control}
                   render={({ field }) => (
-                    <TextField
-                      {...field}
-                      select
+                    <AutocompleteField
                       label="Tipo de veículo"
                       size="small"
+                      fullWidth={false}
                       sx={{ minWidth: 140 }}
-                      onChange={(e) => {
-                        field.onChange(e)
+                      value={field.value}
+                      onChange={(v) => {
+                        field.onChange(v)
                         setValue('fipe_brand_code', '')
                         setValue('fipe_model_code', '')
                         setValue('fipe_year_code', '')
                         setValue('fipe_code', '')
                       }}
-                    >
-                      {FIPE_VEHICLE_TYPE_OPTIONS.map((o) => (
-                        <MenuItem key={o.value} value={o.value}>
-                          {o.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                      options={FIPE_VEHICLE_TYPE_OPTIONS}
+                      disableClearable
+                    />
                   )}
                 />
 
@@ -308,36 +303,20 @@ function VehicleFormDialog({
                   name="fipe_brand_code"
                   control={control}
                   render={({ field }) => (
-                    <Autocomplete
-                      options={brandsQuery.data ?? []}
-                      getOptionLabel={(o) => o.nome}
+                    <AutocompleteField
+                      label="Marca"
+                      size="small"
+                      sx={{ flex: 1 }}
+                      options={brandOptions}
                       loading={brandsQuery.isLoading}
-                      value={selectedBrand}
-                      onChange={(_, v) => {
-                        field.onChange(v?.codigo ?? '')
+                      value={field.value}
+                      onChange={(v) => {
+                        field.onChange(v)
                         setValue('fipe_model_code', '')
                         setValue('fipe_year_code', '')
                         setValue('fipe_code', '')
                       }}
-                      isOptionEqualToValue={(o, v) => o.codigo === v.codigo}
                       disabled={!fipeVehicleType}
-                      sx={{ flex: 1 }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Marca"
-                          size="small"
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {brandsQuery.isLoading && <CircularProgress size={14} />}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
                     />
                   )}
                 />
@@ -346,35 +325,19 @@ function VehicleFormDialog({
                   name="fipe_model_code"
                   control={control}
                   render={({ field }) => (
-                    <Autocomplete
-                      options={modelsQuery.data ?? []}
-                      getOptionLabel={(o) => o.nome}
+                    <AutocompleteField
+                      label="Modelo"
+                      size="small"
+                      sx={{ flex: 1 }}
+                      options={modelOptions}
                       loading={modelsQuery.isLoading}
-                      value={selectedModel}
-                      onChange={(_, v) => {
-                        field.onChange(v ? String(v.codigo) : '')
+                      value={field.value}
+                      onChange={(v) => {
+                        field.onChange(v)
                         setValue('fipe_year_code', '')
                         setValue('fipe_code', '')
                       }}
-                      isOptionEqualToValue={(o, v) => o.codigo === v.codigo}
                       disabled={!fipeBrandCode}
-                      sx={{ flex: 1 }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Modelo"
-                          size="small"
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {modelsQuery.isLoading && <CircularProgress size={14} />}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
                     />
                   )}
                 />
@@ -383,31 +346,16 @@ function VehicleFormDialog({
                   name="fipe_year_code"
                   control={control}
                   render={({ field }) => (
-                    <Autocomplete
-                      options={yearsQuery.data ?? []}
-                      getOptionLabel={(o) => o.nome}
-                      loading={yearsQuery.isLoading}
-                      value={selectedYear}
-                      onChange={(_, v) => field.onChange(v?.codigo ?? '')}
-                      isOptionEqualToValue={(o, v) => o.codigo === v.codigo}
-                      disabled={!fipeModelCode}
+                    <AutocompleteField
+                      label="Ano / Combustível"
+                      size="small"
+                      fullWidth={false}
                       sx={{ minWidth: 160 }}
-                      renderInput={(params) => (
-                        <TextField
-                          {...params}
-                          label="Ano / Combustível"
-                          size="small"
-                          InputProps={{
-                            ...params.InputProps,
-                            endAdornment: (
-                              <>
-                                {yearsQuery.isLoading && <CircularProgress size={14} />}
-                                {params.InputProps.endAdornment}
-                              </>
-                            ),
-                          }}
-                        />
-                      )}
+                      options={yearOptions}
+                      loading={yearsQuery.isLoading}
+                      value={field.value}
+                      onChange={field.onChange}
+                      disabled={!fipeModelCode}
                     />
                   )}
                 />
@@ -530,13 +478,14 @@ function VehicleFormDialog({
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} select label="Combustível" fullWidth required>
-                  {FUEL_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Combustível"
+                  required
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={FUEL_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
           </Stack>
@@ -619,13 +568,15 @@ function VehicleFormDialog({
                   name="status"
                   control={control}
                   render={({ field }) => (
-                    <TextField {...field} select label="Status" sx={{ minWidth: 160 }}>
-                      {VEHICLE_STATUS_OPTIONS.map((o) => (
-                        <MenuItem key={o.value} value={o.value}>
-                          {o.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                    <AutocompleteField
+                      label="Status"
+                      fullWidth={false}
+                      sx={{ minWidth: 160 }}
+                      value={field.value}
+                      onChange={field.onChange}
+                      options={VEHICLE_STATUS_OPTIONS}
+                      disableClearable
+                    />
                   )}
                 />
                 {status === 'sold' && (
@@ -769,26 +720,19 @@ export default function VehiclesPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={statusFilter}
-            onChange={(e) => {
-              setStatusFilter(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {VEHICLE_STATUS_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todos"
+            value={statusFilter}
+            onChange={(v) => {
+              setStatusFilter(v)
+              setPage(0)
+            }}
+            options={VEHICLE_STATUS_OPTIONS}
+          />
         </Stack>
       </Card>
 

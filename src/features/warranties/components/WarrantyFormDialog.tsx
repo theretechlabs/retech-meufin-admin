@@ -7,7 +7,6 @@ import {
   DialogTitle,
   Divider,
   InputAdornment,
-  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -29,6 +28,7 @@ import {
   warrantyKeys,
 } from '../constants'
 import { ErrorState } from '@/features/health/components/StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 type FormValues = {
   item_name: string
@@ -165,13 +165,14 @@ export function WarrantyFormDialog({
               name="category"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Categoria" fullWidth sx={{ minWidth: 200 }}>
-                  {CATEGORY_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Categoria"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={CATEGORY_OPTIONS}
+                  disableClearable
+                  sx={{ minWidth: 200 }}
+                />
               )}
             />
           </Stack>

@@ -10,7 +10,6 @@ import {
   DialogTitle,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Tab,
   Tabs,
@@ -23,14 +22,10 @@ import WhatsAppIcon from '@mui/icons-material/WhatsApp'
 import EmailRoundedIcon from '@mui/icons-material/EmailRounded'
 import BlockRoundedIcon from '@mui/icons-material/BlockRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  createShareLink,
-  listShareLinks,
-  revokeShareLink,
-  SHARE_TTL_OPTIONS,
-  type ShareLink,
-} from '../api'
-import { errorMessage, healthKeys } from '../constants'
+import { createShareLink, listShareLinks, revokeShareLink, type ShareLink } from '../api'
+import { errorMessage, healthKeys, SHARE_TTL_OPTIONS } from '../constants'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 import { formatDateTimeBR } from '@/utils/dates'
 
 const STATUS_CHIP: Record<ShareLink['status'], { label: string; color: 'success' | 'default' | 'error' }> = {
@@ -120,19 +115,13 @@ export function ShareLinkDialog({
               onChange={(e) => setTitle(e.target.value)}
               fullWidth
             />
-            <TextField
-              select
+            <AutocompleteField
               label="Validade"
-              value={ttl}
-              onChange={(e) => setTtl(Number(e.target.value))}
-              fullWidth
-            >
-              {SHARE_TTL_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              value={String(ttl)}
+              onChange={(v) => setTtl(Number(v))}
+              options={numericOptions(SHARE_TTL_OPTIONS)}
+              disableClearable
+            />
           </Stack>
         )}
 
