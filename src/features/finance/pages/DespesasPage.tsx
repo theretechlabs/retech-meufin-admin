@@ -103,6 +103,15 @@ import { EmptyState, ErrorState, LoadingState } from '@/features/health/componen
 import { useToast } from '@/providers/ToastProvider'
 import { PurchaseEditDialog } from '../components/PurchaseEditDialog'
 import { WaiveEntryDialog } from '../components/WaiveEntryDialog'
+import { LateChargesFields } from '../components/LateChargesFields'
+import {
+  bpToPercentText,
+  EMPTY_LATE_CHARGES,
+  lateChargesCents,
+  percentTextToBp,
+  type LateChargesValue,
+} from '../lateCharges'
+import { DecimalField } from '@/components/fields/DecimalField'
 import { EntryDetailDialog } from '../components/EntryDetailDialog'
 import { AttachmentDraftList, type AttachmentDraft } from '../components/EntryAttachments'
 import { isAttachmentReplicable } from '../constants'
@@ -181,6 +190,9 @@ type EntryFormValues = {
   confirm_past: boolean
   description: string
   notes: string
+  /** Termos de atraso em % (texto pt-BR). Vazio = padrão do sistema. */
+  late_fee_pct: string
+  late_interest_pct: string
   apply_to_future: boolean
 }
 
@@ -201,6 +213,8 @@ function emptyEntryForm(): EntryFormValues {
     confirm_past: false,
     description: '',
     notes: '',
+    late_fee_pct: '',
+    late_interest_pct: '',
     apply_to_future: false,
   }
 }
@@ -443,6 +457,7 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
   })
   const [files, setFiles] = useState<File[]>([])
+  const [charges, setCharges] = useState<LateChargesValue>(EMPTY_LATE_CHARGES)
   // Confirmação já gravada na API: um retry (após falha de upload) só reenvia
   // os comprovantes pendentes, nunca confirma de novo.
   const [confirmed, setConfirmed] = useState(false)
@@ -453,7 +468,12 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
   })
 
   const discountCents = reaisToCents(discountText)
-  const expectedCents = entry.amount_cents - discountCents
+  const feeCents = reaisToCents(charges.fee)
+  const interestCents = reaisToCents(charges.interest)
+  // Isenção total não admite encargo: o backend rejeita, então nem oferece.
+  const waived = discountCents > 0 && discountCents >= entry.amount_cents
+  const chargesCents = waived ? 0 : lateChargesCents(charges)
+  const expectedCents = entry.amount_cents - discountCents + chargesCents
   const paidCents = reaisToCents(paidText)
   const paidProvided = paidCents > 0
   const residualCents = paidProvided ? expectedCents - paidCents : 0
@@ -487,6 +507,8 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
         show(`Pagamento parcial confirmado. Residual de ${formatCents(residualCents)} criado.`)
       } else if (discountCents > 0) {
         show(`Pagamento confirmado com ${formatCents(discountCents)} de desconto.`)
+      } else if (chargesCents > 0) {
+        show(`Pagamento confirmado com ${formatCents(chargesCents)} de juros e multa.`)
       } else {
         show('Despesa confirmada como paga.')
       }
@@ -502,6 +524,10 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
     if (discountCents > 0) {
       payload.discount_cents = discountCents
       payload.discount_reason = reason
+    }
+    if (chargesCents > 0) {
+      if (feeCents > 0) payload.late_fee_cents = feeCents
+      if (interestCents > 0) payload.late_interest_cents = interestCents
     }
     if (expectedCents === 0) {
       // Isenção total: pago zero explícito, sem residual.
@@ -533,6 +559,15 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
             InputLabelProps={{ shrink: true }}
             helperText="Quando o pagamento foi feito (padrão: hoje)"
           />
+          {!waived && (
+            <LateChargesFields
+              entryId={entry.id}
+              paidAt={paidDate}
+              value={charges}
+              onChange={setCharges}
+              disabled={mutation.isPending || confirmed}
+            />
+          )}
           <MoneyField
             label="Desconto (opcional)"
             value={discountText}
@@ -569,7 +604,9 @@ function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () =>
             helperText={
               paidInvalid
                 ? `Valor pago não pode ser maior que o devido (${formatCents(expectedCents)})`
-                : `Vazio = pagamento integral de ${formatCents(expectedCents)}`
+                : chargesCents > 0
+                  ? `Vazio = pagamento integral de ${formatCents(expectedCents)} (inclui ${formatCents(chargesCents)} de encargos)`
+                  : `Vazio = pagamento integral de ${formatCents(expectedCents)}`
             }
           />
           {residualCents > 0 && !isInvoice && (
@@ -691,6 +728,8 @@ function EntryFormDialog({
           confirm_past: false,
           description: entry.description,
           notes: entry.notes ?? '',
+          late_fee_pct: bpToPercentText(entry.late_fee_bp),
+          late_interest_pct: bpToPercentText(entry.late_interest_monthly_bp),
           apply_to_future: false,
         }
       : emptyEntryForm(),
@@ -784,6 +823,15 @@ function EntryFormDialog({
         recurrence: values.installments ? 'none' : values.recurrence,
         notes: values.notes.trim() || null,
         supplier_id: values.supplier_id || null,
+      }
+      // Termos de atraso: no create só vão se preenchidos; no update vão
+      // sempre (null nos dois = volta ao padrão), porque a chave presente é
+      // o que diz ao backend "grave isto".
+      const feeBp = percentTextToBp(values.late_fee_pct)
+      const interestBp = percentTextToBp(values.late_interest_pct)
+      if (isEdit || feeBp != null || interestBp != null) {
+        base.late_fee_bp = feeBp
+        base.late_interest_monthly_bp = interestBp
       }
       if (!isEdit && values.installments) {
         if (editorOpen) {
@@ -1327,6 +1375,39 @@ function EntryFormDialog({
             )}
           />
 
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Controller
+              name="late_fee_pct"
+              control={control}
+              render={({ field }) => (
+                <DecimalField
+                  {...field}
+                  decimals={2}
+                  unit="%"
+                  label="Multa por atraso"
+                  placeholder="2,00"
+                  fullWidth
+                  helperText="Vazio = padrão 2%"
+                />
+              )}
+            />
+            <Controller
+              name="late_interest_pct"
+              control={control}
+              render={({ field }) => (
+                <DecimalField
+                  {...field}
+                  decimals={2}
+                  unit="% a.m."
+                  label="Juros ao mês"
+                  placeholder="1,00"
+                  fullWidth
+                  helperText="Vazio = padrão 1% a.m., pro rata dia"
+                />
+              )}
+            />
+          </Stack>
+
           <Divider />
           <AttachmentDraftList
             drafts={attachmentDrafts}
@@ -1714,6 +1795,19 @@ export default function DespesasPage() {
                             sx={{ color: 'success.main', fontWeight: 600 }}
                           >
                             −{formatCents(e.discount_cents)}
+                          </Typography>
+                        </Tooltip>
+                      ) : null}
+                      {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
+                        <Tooltip
+                          title={`Juros e multa: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — pago ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
+                        >
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{ color: 'warning.main', fontWeight: 600 }}
+                          >
+                            +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
                           </Typography>
                         </Tooltip>
                       ) : null}
