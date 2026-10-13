@@ -1070,7 +1070,20 @@ export async function listCardBrands(): Promise<CardBrand[]> {
   return data.items
 }
 
+/** Cartões ATIVOS — é o que entra em qualquer seletor/filtro do sistema. */
 export async function listCards(): Promise<CreditCard[]> {
+  const { data } = await meufinClient.get<Paginated<CreditCard>>(`${BASE}/cards`, {
+    params: { limit: 500, active: true },
+  })
+  return data.items
+}
+
+/**
+ * Todos os cartões, inclusive inativos — só para resolver nome a partir do id
+ * em registros antigos (parcelamentos/faturas de cartão já desativado). Nunca
+ * use como fonte de opções.
+ */
+export async function listCardsIncludingInactive(): Promise<CreditCard[]> {
   const { data } = await meufinClient.get<Paginated<CreditCard>>(`${BASE}/cards`, {
     params: { limit: 500 },
   })
@@ -1301,9 +1314,10 @@ export type FinanceAccountInput = {
   notes?: string | null
 }
 
+/** Contas ATIVAS — é o que entra em qualquer seletor do sistema. */
 export async function listAccounts(): Promise<FinanceAccount[]> {
   const { data } = await meufinClient.get<Paginated<FinanceAccount>>(`${BASE}/accounts`, {
-    params: { limit: 500 },
+    params: { limit: 500, active: true },
   })
   return data.items
 }

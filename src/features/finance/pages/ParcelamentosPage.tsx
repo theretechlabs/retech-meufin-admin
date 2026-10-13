@@ -49,7 +49,12 @@ import {
   YAxis,
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
-import { formatCents, getInstallmentsProjection, listCards } from '../api'
+import {
+  formatCents,
+  getInstallmentsProjection,
+  listCards,
+  listCardsIncludingInactive,
+} from '../api'
 import type { InstallmentGroup, MonthlyCommitment } from '../api'
 import { errorMessage, financeKeys } from '../constants'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
@@ -143,13 +148,19 @@ export default function ParcelamentosPage() {
     queryKey: [...financeKeys.all, 'installments-projection'] as const,
     queryFn: getInstallmentsProjection,
   })
+  // Opções do filtro: só cartões ativos. Nome na tabela: todos, porque
+  // parcelamentos antigos podem pertencer a cartão já desativado.
   const cardsQuery = useQuery({
     queryKey: financeKeys.cards(),
     queryFn: listCards,
   })
+  const allCardsQuery = useQuery({
+    queryKey: financeKeys.cardsIncludingInactive(),
+    queryFn: listCardsIncludingInactive,
+  })
 
   const cardName = (id?: string | null) =>
-    (cardsQuery.data ?? []).find((c) => c.id === id)?.name ?? '—'
+    (allCardsQuery.data ?? []).find((c) => c.id === id)?.name ?? '—'
 
   const proj = projectionQuery.data
   const groups = useMemo(() => proj?.groups ?? [], [proj])

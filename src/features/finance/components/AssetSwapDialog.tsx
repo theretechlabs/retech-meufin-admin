@@ -179,9 +179,11 @@ export function AssetSwapDialog({
     .filter((sp) => sp.active)
     .map((sp) => ({ value: sp.id, label: sp.name }))
   const newSupplier = (suppliers ?? []).find((sp) => sp.id === supplierId)
-  const accountOptions = (accounts ?? [])
-    .filter((a) => a.active)
-    .map((a) => ({ value: a.id, label: a.name, description: a.bank_name ?? undefined }))
+  const accountOptions = (accounts ?? []).map((a) => ({
+    value: a.id,
+    label: a.name,
+    description: a.bank_name ?? undefined,
+  }))
 
   const payoffCents = oldGroupId ? reaisToCents(payoffText) : 0
   const tradeInCents = reaisToCents(tradeInText)

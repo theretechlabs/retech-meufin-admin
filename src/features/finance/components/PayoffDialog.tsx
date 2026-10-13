@@ -227,9 +227,11 @@ export function PayoffDialog({
                       emptyLabel="Não informar"
                       value={accountId}
                       onChange={setAccountId}
-                      options={(accounts ?? [])
-                        .filter((a) => a.active)
-                        .map((a) => ({ value: a.id, label: a.name, description: a.bank_name ?? undefined }))}
+                      options={(accounts ?? []).map((a) => ({
+                        value: a.id,
+                        label: a.name,
+                        description: a.bank_name ?? undefined,
+                      }))}
                     />
                   </Box>
                 )}

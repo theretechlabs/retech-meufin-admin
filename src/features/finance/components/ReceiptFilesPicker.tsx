@@ -7,15 +7,19 @@ import { RECEIPT_ACCEPT } from './EntryReceiptsSection'
  * Abre um arquivo local (ainda não enviado) em nova aba.
  * Chrome renderiza PDF e imagem nativamente a partir de uma blob URL;
  * a URL é revogada depois que a aba carrega, pra não vazar memória.
+ *
+ * Usa um <a target="_blank"> sintético em vez de window.open: com a feature
+ * "noopener", window.open abre a aba E devolve null — o fallback de pop-up
+ * bloqueado então navegava a aba atual para o arquivo também (abria duas
+ * vezes e perdia o diálogo). O anchor nunca mexe na aba atual.
  */
 function openLocalFile(file: File) {
   const url = URL.createObjectURL(file)
-  const tab = window.open(url, '_blank', 'noopener')
-  if (!tab) {
-    // Pop-up bloqueado: cai no mesmo comportamento de um link comum.
-    window.location.href = url
-    return
-  }
+  const a = document.createElement('a')
+  a.href = url
+  a.target = '_blank'
+  a.rel = 'noopener'
+  a.click()
   // Tempo suficiente pra aba iniciar o download do blob antes de revogar.
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000)
 }

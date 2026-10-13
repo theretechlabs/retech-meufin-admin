@@ -436,9 +436,7 @@ export function SettleEntryDialog({
                   emptyLabel="Não informar"
                   value={field.value}
                   onChange={field.onChange}
-                  options={(accounts ?? [])
-                    .filter((a) => a.active)
-                    .map((a) => ({
+                  options={(accounts ?? []).map((a) => ({
                       value: a.id,
                       label: a.name,
                       description: a.bank_name ?? undefined,
@@ -464,9 +462,7 @@ export function SettleEntryDialog({
                       ? 'Informe o cartão usado'
                       : 'A compra entra na próxima fatura do cartão — registre-a lá também.'
                   }
-                  options={(cards ?? [])
-                    .filter((c) => c.active)
-                    .map((c) => ({ value: c.id, label: c.name }))}
+                  options={(cards ?? []).map((c) => ({ value: c.id, label: c.name }))}
                 />
               )}
             />
