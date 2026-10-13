@@ -563,8 +563,9 @@ function EntryFormDialog({
                 <Alert severity="info" icon={<RepeatRoundedIcon />}>
                   <strong>Data de vencimento</strong>: o novo dia é aplicado às ocorrências{' '}
                   <strong>desta em diante</strong> (inclusive realizadas), cada uma no seu mês —
-                  as anteriores preservam o vencimento histórico. Valor, descrição e categoria:
-                  apenas nas previstas futuras. Canceladas ficam de fora.
+                  as anteriores preservam o vencimento histórico. Valor, descrição, categoria e
+                  termos de atraso (multa e juros): apenas nas previstas futuras. Canceladas ficam
+                  de fora.
                 </Alert>
               )}
             </>
