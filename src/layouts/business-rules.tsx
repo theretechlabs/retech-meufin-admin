@@ -130,6 +130,12 @@ export const businessRules: Record<string, BusinessRule> = {
       },
       {
         type: 'callout',
+        tone: 'info',
+        title: 'Pagou atrasado? Juros e multa entram na liquidação',
+        text: 'Ao confirmar ou liquidar depois do vencimento, o sistema calcula multa e juros pela data do pagamento — pelos termos informados no lançamento ou, sem eles, pelo padrão (multa 2% + juros 1% ao mês, pro rata dia). Ajuste se o boleto cobrou diferente. O valor pago soma os encargos e eles ficam registrados como indicador.',
+      },
+      {
+        type: 'callout',
         tone: 'warning',
         title: 'Parcelado: o valor é DA PARCELA',
         text: 'Em despesa parcelada, informe o valor de cada parcela (o aviso mostra a conta: N× valor = total). O sistema clona esse valor em cada parcela — nunca digite o total.',

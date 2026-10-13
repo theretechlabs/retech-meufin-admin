@@ -144,6 +144,22 @@ export function EntryDetailDialog({ entry, onClose }: { entry: Entry; onClose: (
               value={entry.discount_cents ? formatCents(entry.discount_cents) : undefined}
             />
             <Field label="Motivo do desconto" value={entry.discount_reason ?? undefined} />
+            <Field
+              label={isIncome ? 'Multa recebida' : 'Multa paga'}
+              value={entry.late_fee_cents ? formatCents(entry.late_fee_cents) : undefined}
+            />
+            <Field
+              label={isIncome ? 'Juros recebidos' : 'Juros pagos'}
+              value={entry.late_interest_cents ? formatCents(entry.late_interest_cents) : undefined}
+            />
+            <Field
+              label="Termos de atraso"
+              value={
+                entry.late_fee_bp != null || entry.late_interest_monthly_bp != null
+                  ? `multa ${((entry.late_fee_bp ?? 0) / 100).toLocaleString('pt-BR')}% · juros ${((entry.late_interest_monthly_bp ?? 0) / 100).toLocaleString('pt-BR')}% a.m.`
+                  : 'Padrão (2% + 1% a.m.)'
+              }
+            />
             <Field label="Motivo do cancelamento" value={entry.cancel_reason ?? undefined} />
             <Field
               label="Categoria"

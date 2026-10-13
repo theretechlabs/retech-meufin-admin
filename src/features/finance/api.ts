@@ -115,6 +115,14 @@ export type Entry = {
   payment_card_id?: string | null
   discount_cents?: number | null
   discount_reason?: string | null
+  /** Multa por atraso em basis points (200 = 2%); null = padrão do sistema. */
+  late_fee_bp?: number | null
+  /** Juros ao mês em basis points (100 = 1% a.m.); null = padrão do sistema. */
+  late_interest_monthly_bp?: number | null
+  /** Multa efetivamente paga na liquidação (soma ao valor pago). */
+  late_fee_cents?: number | null
+  /** Juros efetivamente pagos na liquidação (somam ao valor pago). */
+  late_interest_cents?: number | null
   /** Motivo do cancelamento (catálogo global); define se a recorrência é encerrada. */
   cancel_reason?: string | null
   /** Vínculo com um evento de renegociação (origem encerrada ou parcela nova). */
@@ -184,6 +192,12 @@ export type EntryInput = {
   recurrence_group_id?: string | null
   notes?: string | null
   supplier_id?: string | null
+  /**
+   * Termos de atraso (basis points: 200 = 2%). Create: ausentes = padrão.
+   * Update: chave ausente preserva; presente grava (null nos dois = padrão).
+   */
+  late_fee_bp?: number | null
+  late_interest_monthly_bp?: number | null
   /** Data da compra (YYYY-MM-DD, itens de fatura). */
   purchase_date?: string | null
   /** Parcela da compra em fatura (update): ausente preserva; 0 limpa. */
@@ -577,6 +591,9 @@ export type ConfirmEntryPayload = {
   residual_due_date?: string // "YYYY-MM-DD"
   /** Data em que o pagamento foi feito ("YYYY-MM-DD"); ausente = agora. */
   paid_at?: string
+  /** Encargos por atraso pagos: somam ao devido (pago = valor − desconto + multa + juros). */
+  late_fee_cents?: number
+  late_interest_cents?: number
 }
 
 export async function confirmEntry(id: string, payload?: ConfirmEntryPayload): Promise<Entry> {
@@ -586,7 +603,9 @@ export async function confirmEntry(id: string, payload?: ConfirmEntryPayload): P
     payload &&
       (payload.discount_cents !== undefined ||
         payload.paid_amount_cents !== undefined ||
-        payload.paid_at !== undefined),
+        payload.paid_at !== undefined ||
+        payload.late_fee_cents !== undefined ||
+        payload.late_interest_cents !== undefined),
   )
   const { data } = await meufinClient.post<Entry>(
     `${BASE}/entries/${id}/confirm`,
@@ -1340,6 +1359,34 @@ export type SettleEntryInput = {
   account_id?: string | null
   card_id?: string | null
   notes?: string | null
+  /** Encargos por atraso pagos; somam ao valor pago quando paid_amount_cents não vem. */
+  late_fee_cents?: number | null
+  late_interest_cents?: number | null
+}
+
+/**
+ * Cotação de juros e multa para pagar o lançamento numa data. Fonte única do
+ * cálculo (backend): termos do lançamento ou padrão do sistema, pro rata dia.
+ */
+export type LateChargeQuote = {
+  due_date: string
+  paid_at: string
+  days_late: number
+  base_cents: number
+  late_fee_bp: number
+  late_interest_monthly_bp: number
+  /** 'entry' = termos informados no lançamento; 'default' = padrão do sistema. */
+  source: 'entry' | 'default'
+  late_fee_cents: number
+  late_interest_cents: number
+  total_cents: number
+}
+
+export async function getLateChargeQuote(id: string, paidAt?: string): Promise<LateChargeQuote> {
+  const { data } = await meufinClient.get<LateChargeQuote>(`${BASE}/entries/${id}/late-charges`, {
+    params: paidAt ? { paid_at: paidAt } : undefined,
+  })
+  return data
 }
 
 /** Liquida o lançamento (pagamento/recebimento). Fatura pai cascateia para os filhos. */

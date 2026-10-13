@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   Alert,
   Button,
@@ -35,6 +35,13 @@ import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { ErrorState } from '@/features/health/components/StateViews'
 import { ReceiptFilesPicker } from './ReceiptFilesPicker'
 import { uploadReceiptsOrThrow } from '../receiptUpload'
+import { LateChargesFields } from './LateChargesFields'
+import {
+  centsToMoneyText,
+  EMPTY_LATE_CHARGES,
+  lateChargesCents,
+  type LateChargesValue,
+} from '../lateCharges'
 
 type FormValues = {
   paid_at: string // YYYY-MM-DD
@@ -64,6 +71,7 @@ export function SettleEntryDialog({
 }) {
   const qc = useQueryClient()
   const [files, setFiles] = useState<File[]>([])
+  const [charges, setCharges] = useState<LateChargesValue>(EMPTY_LATE_CHARGES)
   const isExpense = entry.kind === 'debit'
 
   const { data: accounts } = useQuery({ queryKey: financeKeys.accounts(), queryFn: listAccounts })
@@ -72,6 +80,7 @@ export function SettleEntryDialog({
   const {
     control,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<FormValues>({
     defaultValues: {
@@ -86,8 +95,19 @@ export function SettleEntryDialog({
 
   const method = useWatch({ control, name: 'payment_method' })
   const paidAmountText = useWatch({ control, name: 'paid_amount' })
+  const paidAt = useWatch({ control, name: 'paid_at' })
   const needsAccount = (ACCOUNT_PAYMENT_METHODS as readonly string[]).includes(method)
   const needsCard = method === 'cartao_credito'
+
+  // Encargos somam ao devido: quando mudam, o valor pago acompanha. O
+  // usuário ainda pode sobrescrever o valor depois (desconto, por exemplo).
+  const chargesCents = lateChargesCents(charges)
+  const feeCents = reaisToCents(charges.fee)
+  const interestCents = reaisToCents(charges.interest)
+  const expectedCents = entry.amount_cents + chargesCents
+  useEffect(() => {
+    setValue('paid_amount', centsToMoneyText(expectedCents))
+  }, [expectedCents, setValue])
 
   // Liquidação já confirmada na API: um retry (após falha de upload) só
   // reenvia os comprovantes pendentes, nunca liquida de novo.
@@ -103,6 +123,8 @@ export function SettleEntryDialog({
           account_id: needsAccount && values.account_id ? values.account_id : null,
           card_id: needsCard && values.card_id ? values.card_id : null,
           notes: values.notes.trim() || null,
+          late_fee_cents: feeCents > 0 ? feeCents : null,
+          late_interest_cents: interestCents > 0 ? interestCents : null,
         })
         setSettled(true)
       }
@@ -120,8 +142,8 @@ export function SettleEntryDialog({
 
   const paidDiffers = useMemo(() => {
     const typed = reaisToCents(paidAmountText)
-    return typed > 0 && typed !== entry.amount_cents
-  }, [paidAmountText, entry.amount_cents])
+    return typed > 0 && typed !== expectedCents
+  }, [paidAmountText, expectedCents])
 
   const submit = handleSubmit((values) => {
     if (needsCard && !values.card_id) return
@@ -189,12 +211,24 @@ export function SettleEntryDialog({
                   error={Boolean(errors.paid_amount)}
                   helperText={
                     errors.paid_amount?.message ??
-                    (paidDiffers ? 'Difere do previsto (juros, multa ou desconto)' : undefined)
+                    (paidDiffers
+                      ? `Difere do devido (${formatCents(expectedCents)})`
+                      : chargesCents > 0
+                        ? `${formatCents(entry.amount_cents)} + ${formatCents(chargesCents)} de encargos`
+                        : undefined)
                   }
                 />
               )}
             />
           </Stack>
+
+          <LateChargesFields
+            entryId={entry.id}
+            paidAt={paidAt}
+            value={charges}
+            onChange={setCharges}
+            disabled={mutation.isPending || settled}
+          />
 
           <Controller
             name="payment_method"

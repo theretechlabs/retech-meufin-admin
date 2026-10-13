@@ -218,6 +218,8 @@ export const financeKeys = {
   receipts: (entryId: string) => [...financeKeys.all, 'receipts', entryId] as const,
   attachments: (entryId: string) => [...financeKeys.all, 'attachments', entryId] as const,
   discountReasons: () => [...financeKeys.all, 'discount-reasons'] as const,
+  lateCharges: (entryId: string, paidAt: string) =>
+    [...financeKeys.all, 'late-charges', entryId, paidAt] as const,
   cancelReasons: () => [...financeKeys.all, 'cancel-reasons'] as const,
   renegotiations: () => [...financeKeys.all, 'renegotiations'] as const,
   debtLineage: (groupId: string) => [...financeKeys.all, 'debt-lineage', groupId] as const,

@@ -76,6 +76,8 @@ import {
   seriesToast } from '../constants'
 import { useYearOptions } from '../hooks/useYearOptions'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { DecimalField } from '@/components/fields/DecimalField'
+import { bpToPercentText, percentTextToBp } from '../lateCharges'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
@@ -152,6 +154,9 @@ type EntryFormValues = {
   recurrence: EntryInput['recurrence']
   description: string
   notes: string
+  /** Termos de atraso em % (texto pt-BR). Vazio = padrão do sistema. */
+  late_fee_pct: string
+  late_interest_pct: string
   apply_to_future: boolean
 }
 
@@ -169,6 +174,8 @@ function emptyEntryForm(): EntryFormValues {
     recurrence: 'none',
     description: '',
     notes: '',
+    late_fee_pct: '',
+    late_interest_pct: '',
     apply_to_future: false,
   }
 }
@@ -294,6 +301,8 @@ function EntryFormDialog({
           recurrence: entry.recurrence,
           description: entry.description,
           notes: entry.notes ?? '',
+          late_fee_pct: bpToPercentText(entry.late_fee_bp),
+          late_interest_pct: bpToPercentText(entry.late_interest_monthly_bp),
           apply_to_future: false,
         }
       : emptyEntryForm(),
@@ -323,6 +332,14 @@ function EntryFormDialog({
         description: values.description.trim(),
         recurrence: values.recurrence,
         notes: values.notes.trim() || null,
+      }
+      // Termos de atraso: no create só vão se preenchidos; no update vão
+      // sempre (null nos dois = volta ao padrão).
+      const feeBp = percentTextToBp(values.late_fee_pct)
+      const interestBp = percentTextToBp(values.late_interest_pct)
+      if (isEdit || feeBp != null || interestBp != null) {
+        base.late_fee_bp = feeBp
+        base.late_interest_monthly_bp = interestBp
       }
       if (isEdit) {
         if (values.apply_to_future) base.apply_to = 'future'
@@ -546,8 +563,9 @@ function EntryFormDialog({
                 <Alert severity="info" icon={<RepeatRoundedIcon />}>
                   <strong>Data de vencimento</strong>: o novo dia é aplicado às ocorrências{' '}
                   <strong>desta em diante</strong> (inclusive realizadas), cada uma no seu mês —
-                  as anteriores preservam o vencimento histórico. Valor, descrição e categoria:
-                  apenas nas previstas futuras. Canceladas ficam de fora.
+                  as anteriores preservam o vencimento histórico. Valor, descrição, categoria e
+                  termos de atraso (multa e juros): apenas nas previstas futuras. Canceladas ficam
+                  de fora.
                 </Alert>
               )}
             </>
@@ -576,6 +594,39 @@ function EntryFormDialog({
               <TextField {...field} label="Observações" fullWidth multiline minRows={2} />
             )}
           />
+
+          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+            <Controller
+              name="late_fee_pct"
+              control={control}
+              render={({ field }) => (
+                <DecimalField
+                  {...field}
+                  decimals={2}
+                  unit="%"
+                  label="Multa por atraso"
+                  placeholder="2,00"
+                  fullWidth
+                  helperText="Se receber atrasado. Vazio = padrão 2%"
+                />
+              )}
+            />
+            <Controller
+              name="late_interest_pct"
+              control={control}
+              render={({ field }) => (
+                <DecimalField
+                  {...field}
+                  decimals={2}
+                  unit="% a.m."
+                  label="Juros ao mês"
+                  placeholder="1,00"
+                  fullWidth
+                  helperText="Vazio = padrão 1% a.m., pro rata dia"
+                />
+              )}
+            />
+          </Stack>
         </Stack>
       </DialogContent>
       <DialogActions sx={{ px: 3, pb: 2 }}>
@@ -905,6 +956,19 @@ export default function ReceitasPage() {
                     <TableCell>{e.type ? INCOME_TYPE_LABEL[e.type] ?? e.type : '—'}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
                       {formatCents(e.amount_cents)}
+                      {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
+                        <Tooltip
+                          title={`Juros e multa recebidos: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — recebido ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
+                        >
+                          <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{ color: 'success.main', fontWeight: 600 }}
+                          >
+                            +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
+                          </Typography>
+                        </Tooltip>
+                      ) : null}
                     </TableCell>
                     <TableCell>
                       {e.recurrence !== 'none' ? (
