@@ -48,7 +48,6 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import {
-  confirmEntry,
   listDiscountReasons,
   listFiscalItems,
   reopenEntry,
@@ -62,7 +61,6 @@ import {
   reaisToCents,
   resizeInstallments,
   updateEntry,
-  type ConfirmEntryPayload,
   type Entry,
   type EntryInput,
   type ListEntriesParams,
@@ -103,21 +101,16 @@ import { EmptyState, ErrorState, LoadingState } from '@/features/health/componen
 import { useToast } from '@/providers/ToastProvider'
 import { PurchaseEditDialog } from '../components/PurchaseEditDialog'
 import { WaiveEntryDialog } from '../components/WaiveEntryDialog'
-import { LateChargesFields } from '../components/LateChargesFields'
+import { SettleEntryDialog } from '../components/SettleEntryDialog'
 import {
   bpToPercentText,
-  EMPTY_LATE_CHARGES,
-  lateChargesCents,
   percentTextToBp,
-  type LateChargesValue,
 } from '../lateCharges'
 import { DecimalField } from '@/components/fields/DecimalField'
 import { EntryDetailDialog } from '../components/EntryDetailDialog'
 import { AttachmentDraftList, type AttachmentDraft } from '../components/EntryAttachments'
 import { isAttachmentReplicable } from '../constants'
 import { CancelEntryDialog } from '../components/CancelEntryDialog'
-import { ReceiptFilesPicker } from '../components/ReceiptFilesPicker'
-import { uploadReceiptsOrThrow } from '../receiptUpload'
 
 const now = new Date()
 
@@ -438,225 +431,6 @@ function ExpenseDetailRow({
         )}
       </TableCell>
     </TableRow>
-  )
-}
-
-// ---------------------------------------------------------------------------
-// Dialog: confirmar pagamento (com desconto opcional)
-// ---------------------------------------------------------------------------
-
-function ConfirmPaymentDialog({ entry, onClose }: { entry: Entry; onClose: () => void }) {
-  const qc = useQueryClient()
-  const { show } = useToast()
-  const [discountText, setDiscountText] = useState('')
-  const [reason, setReason] = useState('')
-  const [paidText, setPaidText] = useState('')
-  const [residualDate, setResidualDate] = useState(entry.due_date)
-  const [paidDate, setPaidDate] = useState(() => {
-    const d = new Date()
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
-  })
-  const [files, setFiles] = useState<File[]>([])
-  const [charges, setCharges] = useState<LateChargesValue>(EMPTY_LATE_CHARGES)
-  // Confirmação já gravada na API: um retry (após falha de upload) só reenvia
-  // os comprovantes pendentes, nunca confirma de novo.
-  const [confirmed, setConfirmed] = useState(false)
-
-  const reasonsQuery = useQuery({
-    queryKey: financeKeys.discountReasons(),
-    queryFn: listDiscountReasons,
-  })
-
-  const discountCents = reaisToCents(discountText)
-  const feeCents = reaisToCents(charges.fee)
-  const interestCents = reaisToCents(charges.interest)
-  // Isenção total não admite encargo: o backend rejeita, então nem oferece.
-  const waived = discountCents > 0 && discountCents >= entry.amount_cents
-  const chargesCents = waived ? 0 : lateChargesCents(charges)
-  const expectedCents = entry.amount_cents - discountCents + chargesCents
-  const paidCents = reaisToCents(paidText)
-  const paidProvided = paidCents > 0
-  const residualCents = paidProvided ? expectedCents - paidCents : 0
-
-  // Desconto igual ao valor é isenção total (bônus/cortesia/ressarcimento) e
-  // é válido; só acima do valor é erro. Nesse caso o pago vai a zero.
-  const discountInvalid =
-    discountCents > 0 && (discountCents > entry.amount_cents || !reason)
-  const paidInvalid = paidProvided && paidCents > expectedCents
-  // Entry.type é IncomeType no modelo, mas em débitos carrega o slug da
-  // categoria de despesa ('cartao' identifica fatura).
-  const isInvoice = (entry.type as string | null | undefined) === 'cartao'
-  const partialBlocked = residualCents > 0 && isInvoice
-
-  const mutation = useMutation({
-    mutationFn: async () => {
-      if (!confirmed) {
-        await confirmWithPayload()
-        setConfirmed(true)
-      }
-      await uploadReceiptsOrThrow(entry.id, files, setFiles)
-    },
-    onSettled: () => {
-      // Mesmo com falha no upload, a confirmação pode ter sido gravada.
-      qc.invalidateQueries({ queryKey: financeKeys.all })
-    },
-    onSuccess: () => {
-      if (expectedCents === 0) {
-        show('Registrado: nada a pagar neste mês. A recorrência segue normalmente.')
-      } else if (residualCents > 0) {
-        show(`Pagamento parcial confirmado. Residual de ${formatCents(residualCents)} criado.`)
-      } else if (discountCents > 0) {
-        show(`Pagamento confirmado com ${formatCents(discountCents)} de desconto.`)
-      } else if (chargesCents > 0) {
-        show(`Pagamento confirmado com ${formatCents(chargesCents)} de juros e multa.`)
-      } else {
-        show('Despesa confirmada como paga.')
-      }
-      onClose()
-    },
-  })
-
-  function confirmWithPayload() {
-    const payload: ConfirmEntryPayload = {}
-    if (paidDate) {
-      payload.paid_at = paidDate
-    }
-    if (discountCents > 0) {
-      payload.discount_cents = discountCents
-      payload.discount_reason = reason
-    }
-    if (chargesCents > 0) {
-      if (feeCents > 0) payload.late_fee_cents = feeCents
-      if (interestCents > 0) payload.late_interest_cents = interestCents
-    }
-    if (expectedCents === 0) {
-      // Isenção total: pago zero explícito, sem residual.
-      payload.paid_amount_cents = 0
-    } else if (paidProvided && paidCents < expectedCents) {
-      payload.paid_amount_cents = paidCents
-      if (residualDate && residualDate !== entry.due_date) {
-        payload.residual_due_date = residualDate
-      }
-    }
-    return confirmEntry(entry.id, payload)
-  }
-
-  return (
-    <Dialog open onClose={mutation.isPending ? undefined : onClose} maxWidth="xs" fullWidth>
-      <DialogTitle sx={{ fontWeight: 800 }}>Confirmar pagamento</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2} sx={{ mt: 1 }}>
-          {mutation.isError && <ErrorState message={errorMessage(mutation.error)} />}
-          <Typography variant="body2" color="text.secondary">
-            {entry.description} — {formatCents(entry.amount_cents)}
-          </Typography>
-          <TextField
-            type="date"
-            label="Data do pagamento"
-            value={paidDate}
-            onChange={(e) => setPaidDate(e.target.value)}
-            fullWidth
-            InputLabelProps={{ shrink: true }}
-            helperText="Quando o pagamento foi feito (padrão: hoje)"
-          />
-          {!waived && (
-            <LateChargesFields
-              entryId={entry.id}
-              paidAt={paidDate}
-              value={charges}
-              onChange={setCharges}
-              disabled={mutation.isPending || confirmed}
-            />
-          )}
-          <MoneyField
-            label="Desconto (opcional)"
-            value={discountText}
-            onChange={(e) => setDiscountText(e.target.value)}
-            fullWidth
-            error={discountCents > 0 && discountCents > entry.amount_cents}
-            helperText={
-              discountCents > 0 && discountCents > entry.amount_cents
-                ? 'Desconto não pode ser maior que o valor da despesa'
-                : discountCents > 0 && discountCents === entry.amount_cents
-                  ? 'Isenção total: nada a pagar neste mês.'
-                  : undefined
-            }
-          />
-          {discountCents > 0 && (
-            <AutocompleteField
-              label="Motivo do desconto"
-              value={reason}
-              onChange={setReason}
-              options={(reasonsQuery.data ?? []).map((r) => ({
-                value: r.slug,
-                label: r.name,
-                description: r.description,
-              }))}
-              placeholder="Ex.: pagamento antecipado"
-            />
-          )}
-          <MoneyField
-            label="Valor pago (opcional)"
-            value={paidText}
-            onChange={(e) => setPaidText(e.target.value)}
-            fullWidth
-            error={paidInvalid}
-            helperText={
-              paidInvalid
-                ? `Valor pago não pode ser maior que o devido (${formatCents(expectedCents)})`
-                : chargesCents > 0
-                  ? `Vazio = pagamento integral de ${formatCents(expectedCents)} (inclui ${formatCents(chargesCents)} de encargos)`
-                  : `Vazio = pagamento integral de ${formatCents(expectedCents)}`
-            }
-          />
-          {residualCents > 0 && !isInvoice && (
-            <>
-              <Alert severity="info" icon={false} sx={{ py: 0.5 }}>
-                Pagamento parcial: um lançamento residual de{' '}
-                <strong>{formatCents(residualCents)}</strong> será criado.
-              </Alert>
-              <TextField
-                type="date"
-                label="Vencimento do residual"
-                value={residualDate}
-                onChange={(e) => setResidualDate(e.target.value)}
-                fullWidth
-                InputLabelProps={{ shrink: true }}
-                helperText="Data original = residual nasce vencido; data futura = renegociado"
-              />
-            </>
-          )}
-          {partialBlocked && (
-            <Alert severity="warning" sx={{ py: 0.5 }}>
-              Pagamento parcial de fatura de cartão ainda não é suportado.
-            </Alert>
-          )}
-          <Divider />
-          <ReceiptFilesPicker files={files} onChange={setFiles} disabled={mutation.isPending} />
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button color="inherit" onClick={onClose} disabled={mutation.isPending}>
-          Cancelar
-        </Button>
-        <Button
-          variant="contained"
-          color="success"
-          onClick={() => mutation.mutate()}
-          disabled={
-            mutation.isPending || (!confirmed && (discountInvalid || paidInvalid || partialBlocked))
-          }
-        >
-          {mutation.isPending
-            ? confirmed
-              ? 'Enviando comprovantes…'
-              : 'Confirmando…'
-            : confirmed
-              ? 'Reenviar comprovantes'
-              : 'Confirmar pagamento'}
-        </Button>
-      </DialogActions>
-    </Dialog>
   )
 }
 
@@ -2002,7 +1776,7 @@ export default function DespesasPage() {
       {toDetail && <EntryDetailDialog entry={toDetail} onClose={() => setToDetail(null)} />}
 
       {toConfirm && (
-        <ConfirmPaymentDialog entry={toConfirm} onClose={() => setToConfirm(null)} />
+        <SettleEntryDialog entry={toConfirm} onClose={() => setToConfirm(null)} />
       )}
 
       <ConfirmDialog

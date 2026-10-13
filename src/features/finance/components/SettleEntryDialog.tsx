@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import {
   Alert,
   Button,
@@ -15,10 +15,10 @@ import {
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import {
-  centsToReais,
   formatCents,
   listAccounts,
   listCards,
+  listDiscountReasons,
   reaisToCents,
   settleEntry,
   type Entry,
@@ -33,6 +33,7 @@ import {
 import { MoneyField } from '@/components/fields/MoneyField'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { ErrorState } from '@/features/health/components/StateViews'
+import { useToast } from '@/providers/ToastProvider'
 import { ReceiptFilesPicker } from './ReceiptFilesPicker'
 import { uploadReceiptsOrThrow } from '../receiptUpload'
 import { LateChargesFields } from './LateChargesFields'
@@ -46,19 +47,68 @@ import {
 type FormValues = {
   paid_at: string // YYYY-MM-DD
   paid_amount: string // em reais (texto)
-  payment_method: PaymentMethod
+  discount: string // em reais (texto); vazio = sem desconto
+  discount_reason: string // slug do catálogo; obrigatório com desconto
+  residual_due_date: string // YYYY-MM-DD; só no pagamento parcial
+  payment_method: PaymentMethod | '' // '' = não informar
   account_id: string
   card_id: string
   notes: string
 }
 
+/** Hoje no fuso local (toISOString() viraria o dia antes das 21h no Brasil). */
 function todayISO(): string {
-  return new Date().toISOString().slice(0, 10)
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+type Totals = {
+  discountCents: number
+  /** Desconto igual ao valor: isenção total (bônus, cortesia, ressarcimento). */
+  waived: boolean
+  feeCents: number
+  interestCents: number
+  chargesCents: number
+  /** Devido = valor − desconto + encargos. */
+  expectedCents: number
+  paidCents: number
+  /** Devido − pago; > 0 vira lançamento residual. */
+  residualCents: number
+}
+
+function computeTotals(
+  entry: Entry,
+  values: Pick<FormValues, 'discount' | 'paid_amount'>,
+  charges: LateChargesValue,
+): Totals {
+  const discountCents = reaisToCents(values.discount)
+  const waived = discountCents > 0 && discountCents >= entry.amount_cents
+  // Isenção total não admite encargo (o backend rejeita): nem contamos.
+  const feeCents = waived ? 0 : reaisToCents(charges.fee)
+  const interestCents = waived ? 0 : reaisToCents(charges.interest)
+  const chargesCents = waived ? 0 : lateChargesCents(charges)
+  const expectedCents = Math.max(entry.amount_cents - discountCents + chargesCents, 0)
+  const paidCents = waived ? 0 : reaisToCents(values.paid_amount)
+  return {
+    discountCents,
+    waived,
+    feeCents,
+    interestCents,
+    chargesCents,
+    expectedCents,
+    paidCents,
+    residualCents: expectedCents - paidCents,
+  }
 }
 
 /**
- * Liquidação de um lançamento (pagar despesa / receber receita) com forma de
- * pagamento e comprovantes opcionais. Fatura pai cascateia para os filhos.
+ * Liquidação de um lançamento (pagar despesa / receber receita): data, valor,
+ * desconto com motivo, juros e multa por atraso, pagamento parcial com
+ * residual, forma de pagamento (conta/cartão), observações e comprovantes.
+ *
+ * É o único diálogo de liquidação do admin — Despesas, Receitas e Contas do
+ * dia usam este mesmo componente, e ele fala só com POST /entries/:id/settle.
+ * Fatura pai cascateia para os filhos.
  */
 export function SettleEntryDialog({
   entry,
@@ -70,12 +120,21 @@ export function SettleEntryDialog({
   onSettled?: () => void
 }) {
   const qc = useQueryClient()
+  const { show } = useToast()
   const [files, setFiles] = useState<File[]>([])
   const [charges, setCharges] = useState<LateChargesValue>(EMPTY_LATE_CHARGES)
   const isExpense = entry.kind === 'debit'
+  // Entry.type é IncomeType no modelo, mas em débitos carrega o slug da
+  // categoria de despesa ('cartao' identifica fatura).
+  const isInvoice = (entry.type as string | null | undefined) === 'cartao'
+  const isParentInvoice = isInvoice && !entry.parent_id
 
   const { data: accounts } = useQuery({ queryKey: financeKeys.accounts(), queryFn: listAccounts })
   const { data: cards } = useQuery({ queryKey: financeKeys.cards(), queryFn: listCards })
+  const { data: discountReasons } = useQuery({
+    queryKey: financeKeys.discountReasons(),
+    queryFn: listDiscountReasons,
+  })
 
   const {
     control,
@@ -85,47 +144,72 @@ export function SettleEntryDialog({
   } = useForm<FormValues>({
     defaultValues: {
       paid_at: todayISO(),
-      paid_amount: centsToReais(entry.amount_cents).toFixed(2).replace('.', ','),
-      payment_method: 'pix',
+      paid_amount: centsToMoneyText(entry.amount_cents),
+      discount: '',
+      discount_reason: '',
+      residual_due_date: entry.due_date,
+      payment_method: '',
       account_id: '',
       card_id: entry.card_id ?? '',
       notes: '',
     },
   })
 
-  const method = useWatch({ control, name: 'payment_method' })
-  const paidAmountText = useWatch({ control, name: 'paid_amount' })
   const paidAt = useWatch({ control, name: 'paid_at' })
+  const paidAmountText = useWatch({ control, name: 'paid_amount' })
+  const discountText = useWatch({ control, name: 'discount' })
+  const discountReason = useWatch({ control, name: 'discount_reason' })
+  const method = useWatch({ control, name: 'payment_method' })
+  const cardId = useWatch({ control, name: 'card_id' })
   const needsAccount = (ACCOUNT_PAYMENT_METHODS as readonly string[]).includes(method)
   const needsCard = method === 'cartao_credito'
 
-  // Encargos somam ao devido: quando mudam, o valor pago acompanha. O
-  // usuário ainda pode sobrescrever o valor depois (desconto, por exemplo).
-  const chargesCents = lateChargesCents(charges)
-  const feeCents = reaisToCents(charges.fee)
-  const interestCents = reaisToCents(charges.interest)
-  const expectedCents = entry.amount_cents + chargesCents
+  const totals = computeTotals(entry, { discount: discountText, paid_amount: paidAmountText }, charges)
+  const { discountCents, waived, chargesCents, expectedCents, paidCents, residualCents } = totals
+
+  // Devido muda (desconto, encargos) → valor pago acompanha. O usuário ainda
+  // pode reduzir depois para registrar um pagamento parcial.
   useEffect(() => {
     setValue('paid_amount', centsToMoneyText(expectedCents))
   }, [expectedCents, setValue])
 
-  // Liquidação já confirmada na API: um retry (após falha de upload) só
-  // reenvia os comprovantes pendentes, nunca liquida de novo.
+  const discountTooBig = discountCents > entry.amount_cents
+  const discountInvalid = discountCents > 0 && (discountTooBig || !discountReason)
+  const paidAboveDue = paidCents > expectedCents
+  const paidMissing = !waived && paidCents <= 0
+  const partialBlocked = residualCents > 0 && isInvoice
+  const cardMissing = !waived && needsCard && !cardId
+  const invalid = discountInvalid || paidAboveDue || paidMissing || partialBlocked || cardMissing
+
+  // Liquidação já gravada na API: um retry (após falha de upload) só reenvia
+  // os comprovantes pendentes, nunca liquida de novo.
   const [settled, setSettled] = useState(false)
+  const [doneTotals, setDoneTotals] = useState<Totals | null>(null)
 
   const mutation = useMutation({
     mutationFn: async (values: FormValues) => {
       if (!settled) {
+        const t = computeTotals(entry, values, charges)
+        // Isenção total: nada foi pago, forma de pagamento não se aplica.
+        const method = !t.waived && values.payment_method !== '' ? values.payment_method : null
+        const withMethod = method !== null
         await settleEntry(entry.id, {
-          paid_at: values.paid_at || null,
-          paid_amount_cents: reaisToCents(values.paid_amount),
-          payment_method: values.payment_method,
-          account_id: needsAccount && values.account_id ? values.account_id : null,
-          card_id: needsCard && values.card_id ? values.card_id : null,
+          paid_at: values.paid_at,
+          paid_amount_cents: t.paidCents,
+          discount_cents: t.discountCents > 0 ? t.discountCents : null,
+          discount_reason: t.discountCents > 0 ? values.discount_reason : null,
+          late_fee_cents: t.feeCents > 0 ? t.feeCents : null,
+          late_interest_cents: t.interestCents > 0 ? t.interestCents : null,
+          residual_due_date:
+            t.residualCents > 0 && values.residual_due_date !== entry.due_date
+              ? values.residual_due_date
+              : null,
+          payment_method: method,
+          account_id: withMethod && needsAccount && values.account_id ? values.account_id : null,
+          card_id: withMethod && needsCard && values.card_id ? values.card_id : null,
           notes: values.notes.trim() || null,
-          late_fee_cents: feeCents > 0 ? feeCents : null,
-          late_interest_cents: interestCents > 0 ? interestCents : null,
         })
+        setDoneTotals(t)
         setSettled(true)
       }
       await uploadReceiptsOrThrow(entry.id, files, setFiles)
@@ -135,22 +219,43 @@ export function SettleEntryDialog({
       qc.invalidateQueries({ queryKey: financeKeys.all })
     },
     onSuccess: () => {
+      show(successMessage(doneTotals ?? totals))
       onSettled?.()
       onClose()
     },
   })
 
-  const paidDiffers = useMemo(() => {
-    const typed = reaisToCents(paidAmountText)
-    return typed > 0 && typed !== expectedCents
-  }, [paidAmountText, expectedCents])
+  function successMessage(t: Totals): string {
+    const noun = isExpense ? 'Pagamento' : 'Recebimento'
+    if (t.expectedCents === 0) {
+      return `Registrado: nada a ${isExpense ? 'pagar' : 'receber'} neste período. A recorrência segue normalmente.`
+    }
+    if (t.residualCents > 0) {
+      return `${noun} parcial confirmado. Residual de ${formatCents(t.residualCents)} criado.`
+    }
+    if (t.discountCents > 0) {
+      return `${noun} confirmado com ${formatCents(t.discountCents)} de desconto.`
+    }
+    if (t.chargesCents > 0) {
+      return `${noun} confirmado com ${formatCents(t.chargesCents)} de juros e multa.`
+    }
+    return isExpense ? 'Despesa confirmada como paga.' : 'Receita confirmada como recebida.'
+  }
 
   const submit = handleSubmit((values) => {
-    if (needsCard && !values.card_id) return
+    if (!settled && invalid) return
     mutation.mutate(values)
   })
 
-  const isParentInvoice = (entry.type as string | null) === 'cartao' && !entry.parent_id
+  const paidHelper = paidAboveDue
+    ? `Não pode ser maior que o devido (${formatCents(expectedCents)}): juros e multa entram nos campos acima`
+    : paidMissing
+      ? 'Informe o valor'
+      : discountCents > 0 || chargesCents > 0
+        ? `Devido ${formatCents(expectedCents)} = ${formatCents(entry.amount_cents)}${
+            discountCents > 0 ? ` − ${formatCents(discountCents)} de desconto` : ''
+          }${chargesCents > 0 ? ` + ${formatCents(chargesCents)} de encargos` : ''}`
+        : `Menor que o devido = ${isExpense ? 'pagamento' : 'recebimento'} parcial`
 
   return (
     <Dialog open onClose={mutation.isPending ? undefined : onClose} maxWidth="sm" fullWidth>
@@ -177,75 +282,151 @@ export function SettleEntryDialog({
             </Alert>
           )}
 
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+          <Controller
+            name="paid_at"
+            control={control}
+            rules={{ required: 'Informe a data' }}
+            render={({ field }) => (
+              <TextField
+                {...field}
+                type="date"
+                label={isExpense ? 'Pago em' : 'Recebido em'}
+                fullWidth
+                required
+                InputLabelProps={{ shrink: true }}
+                error={Boolean(errors.paid_at)}
+                helperText={errors.paid_at?.message}
+              />
+            )}
+          />
+
+          {!waived && (
+            <LateChargesFields
+              entryId={entry.id}
+              paidAt={paidAt}
+              value={charges}
+              onChange={setCharges}
+              disabled={mutation.isPending || settled}
+            />
+          )}
+
+          <Controller
+            name="discount"
+            control={control}
+            render={({ field }) => (
+              <MoneyField
+                {...field}
+                label="Desconto (opcional)"
+                fullWidth
+                error={discountTooBig}
+                helperText={
+                  discountTooBig
+                    ? 'Desconto não pode ser maior que o valor do lançamento'
+                    : waived
+                      ? `Isenção total: nada a ${isExpense ? 'pagar' : 'receber'} neste período.`
+                      : undefined
+                }
+              />
+            )}
+          />
+          {discountCents > 0 && (
             <Controller
-              name="paid_at"
+              name="discount_reason"
               control={control}
-              rules={{ required: 'Informe a data do pagamento' }}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  type="date"
-                  label={isExpense ? 'Pago em' : 'Recebido em'}
-                  fullWidth
+                <AutocompleteField
+                  label="Motivo do desconto"
                   required
-                  InputLabelProps={{ shrink: true }}
-                  error={Boolean(errors.paid_at)}
-                  helperText={errors.paid_at?.message}
+                  value={field.value}
+                  onChange={field.onChange}
+                  error={!discountReason}
+                  helperText={!discountReason ? 'Informe o motivo' : undefined}
+                  options={(discountReasons ?? []).map((r) => ({
+                    value: r.slug,
+                    label: r.name,
+                    description: r.description,
+                  }))}
+                  placeholder="Ex.: pagamento antecipado"
                 />
               )}
             />
+          )}
+
+          {!waived && (
             <Controller
               name="paid_amount"
               control={control}
-              rules={{
-                required: 'Informe o valor',
-                validate: (v) => reaisToCents(v) !== 0 || 'Valor não pode ser zero',
-              }}
               render={({ field }) => (
                 <MoneyField
                   {...field}
                   label={isExpense ? 'Valor pago' : 'Valor recebido'}
                   fullWidth
                   required
-                  error={Boolean(errors.paid_amount)}
-                  helperText={
-                    errors.paid_amount?.message ??
-                    (paidDiffers
-                      ? `Difere do devido (${formatCents(expectedCents)})`
-                      : chargesCents > 0
-                        ? `${formatCents(entry.amount_cents)} + ${formatCents(chargesCents)} de encargos`
-                        : undefined)
-                  }
+                  error={paidAboveDue || paidMissing}
+                  helperText={paidHelper}
                 />
               )}
             />
-          </Stack>
+          )}
 
-          <LateChargesFields
-            entryId={entry.id}
-            paidAt={paidAt}
-            value={charges}
-            onChange={setCharges}
-            disabled={mutation.isPending || settled}
-          />
+          {residualCents > 0 && !paidMissing && !isInvoice && (
+            <>
+              <Alert severity="info" icon={false} sx={{ py: 0.5 }}>
+                {isExpense ? 'Pagamento' : 'Recebimento'} parcial: um lançamento residual de{' '}
+                <strong>{formatCents(residualCents)}</strong> será criado.
+              </Alert>
+              <Controller
+                name="residual_due_date"
+                control={control}
+                render={({ field }) => (
+                  <TextField
+                    {...field}
+                    type="date"
+                    label="Vencimento do residual"
+                    fullWidth
+                    InputLabelProps={{ shrink: true }}
+                    helperText="Data original = residual nasce vencido; data futura = renegociado"
+                  />
+                )}
+              />
+            </>
+          )}
+          {partialBlocked && !paidMissing && (
+            <Alert severity="warning" sx={{ py: 0.5 }}>
+              Pagamento parcial de fatura de cartão ainda não é suportado.
+            </Alert>
+          )}
 
-          <Controller
-            name="payment_method"
-            control={control}
-            rules={{ required: true }}
-            render={({ field }) => (
-              <TextField {...field} select label="Forma de pagamento" fullWidth required>
-                {PAYMENT_METHOD_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
+          {!waived && (
+            <Controller
+              name="payment_method"
+              control={control}
+              render={({ field }) => (
+                <TextField
+                  {...field}
+                  select
+                  label={isExpense ? 'Forma de pagamento' : 'Forma de recebimento'}
+                  fullWidth
+                  helperText={
+                    field.value
+                      ? undefined
+                      : 'Opcional, mas registra de onde saiu (ou onde entrou) o dinheiro.'
+                  }
+                >
+                  <MenuItem value="">
+                    <em>Não informar</em>
                   </MenuItem>
-                ))}
-              </TextField>
-            )}
-          />
+                  {PAYMENT_METHOD_OPTIONS.map((o) => (
+                    <MenuItem key={o.value} value={o.value}>
+                      {o.label}
+                    </MenuItem>
+                  ))}
+                </TextField>
+              )}
+            />
+          )}
 
-          {needsAccount && (
+          {!waived && needsAccount && (
             <Controller
               name="account_id"
               control={control}
@@ -267,21 +448,21 @@ export function SettleEntryDialog({
             />
           )}
 
-          {needsCard && (
+          {!waived && needsCard && (
             <Controller
               name="card_id"
               control={control}
-              rules={{ required: 'Informe o cartão usado' }}
               render={({ field }) => (
                 <AutocompleteField
                   label="Cartão de crédito"
                   required
                   value={field.value}
                   onChange={field.onChange}
-                  error={Boolean(errors.card_id)}
+                  error={cardMissing}
                   helperText={
-                    errors.card_id?.message ??
-                    'A compra entra na próxima fatura do cartão — registre-a lá também.'
+                    cardMissing
+                      ? 'Informe o cartão usado'
+                      : 'A compra entra na próxima fatura do cartão — registre-a lá também.'
                   }
                   options={(cards ?? [])
                     .filter((c) => c.active)
@@ -308,7 +489,12 @@ export function SettleEntryDialog({
         <Button onClick={onClose} color="inherit" disabled={mutation.isPending}>
           Cancelar
         </Button>
-        <Button onClick={submit} variant="contained" disabled={mutation.isPending}>
+        <Button
+          onClick={submit}
+          variant="contained"
+          color="success"
+          disabled={mutation.isPending || (!settled && invalid)}
+        >
           {mutation.isPending
             ? settled
               ? 'Enviando comprovantes…'

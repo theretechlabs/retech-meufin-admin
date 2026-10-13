@@ -36,6 +36,7 @@ import CancelRoundedIcon from '@mui/icons-material/CancelRounded'
 import MoneyOffRoundedIcon from '@mui/icons-material/MoneyOffRounded'
 import { WaiveEntryDialog } from '../components/WaiveEntryDialog'
 import { CancelEntryDialog } from '../components/CancelEntryDialog'
+import { SettleEntryDialog } from '../components/SettleEntryDialog'
 import UndoRoundedIcon from '@mui/icons-material/UndoRounded'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import PaymentsRoundedIcon from '@mui/icons-material/PaymentsRounded'
@@ -43,7 +44,6 @@ import RepeatRoundedIcon from '@mui/icons-material/RepeatRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import {
-  confirmEntry,
   reopenEntry,
   createEntry,
   createIncomeSource,
@@ -658,6 +658,7 @@ export default function ReceitasPage() {
   const [toDelete, setToDelete] = useState<Entry | null>(null)
   const [toCancel, setToCancel] = useState<Entry | null>(null)
   const [toWaive, setToWaive] = useState<Entry | null>(null)
+  const [toSettle, setToSettle] = useState<Entry | null>(null)
   const [toReopen, setToReopen] = useState<Entry | null>(null)
 
   const membersQuery = useQuery({
@@ -689,13 +690,6 @@ export default function ReceitasPage() {
     queryFn: () => listEntries(listParams),
   })
 
-  const confirmMutation = useMutation({
-    mutationFn: (id: string) => confirmEntry(id),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: financeKeys.all })
-      show('Receita confirmada como recebida.')
-    },
-  })
   const reopenMutation = useMutation({
     mutationFn: (id: string) => reopenEntry(id),
     onSuccess: () => {
@@ -1007,12 +1001,7 @@ export default function ReceitasPage() {
                     <TableCell align="right">
                       {e.status === 'prevista' && (
                         <Tooltip title="Confirmar recebimento">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            disabled={confirmMutation.isPending}
-                            onClick={() => confirmMutation.mutate(e.id)}
-                          >
+                          <IconButton size="small" color="success" onClick={() => setToSettle(e)}>
                             <CheckCircleRoundedIcon fontSize="small" />
                           </IconButton>
                         </Tooltip>
@@ -1092,6 +1081,8 @@ export default function ReceitasPage() {
       {toCancel && <CancelEntryDialog entry={toCancel} onClose={() => setToCancel(null)} />}
 
       {toWaive && <WaiveEntryDialog entry={toWaive} onClose={() => setToWaive(null)} />}
+
+      {toSettle && <SettleEntryDialog entry={toSettle} onClose={() => setToSettle(null)} />}
 
       <ConfirmDialog
         open={Boolean(toReopen)}

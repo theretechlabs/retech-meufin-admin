@@ -1352,16 +1352,29 @@ export type PaymentMethod =
 
 export type AssetType = 'vehicle' | 'property'
 
+/**
+ * Liquidação completa (POST /entries/:id/settle). Superconjunto do `confirm`:
+ * mesmas regras de desconto, encargos e residual, mais forma de pagamento.
+ */
 export type SettleEntryInput = {
   paid_at?: string | null // "YYYY-MM-DD" ou RFC3339; default: agora
-  paid_amount_cents?: number | null // default: amount_cents
-  payment_method: PaymentMethod
+  /**
+   * Default: valor − desconto + encargos. Menor = pagamento parcial (a diferença
+   * vira residual); maior é rejeitado (juros/multa vão em late_*_cents).
+   */
+  paid_amount_cents?: number | null
+  /** Opcional; ausente = não informada (o evento fica "confirmed"). */
+  payment_method?: PaymentMethod | null
   account_id?: string | null
   card_id?: string | null
   notes?: string | null
-  /** Encargos por atraso pagos; somam ao valor pago quando paid_amount_cents não vem. */
+  discount_cents?: number | null
+  discount_reason?: string | null // slug do catálogo /finance/discount-reasons
+  /** Encargos por atraso pagos; somam ao devido. */
   late_fee_cents?: number | null
   late_interest_cents?: number | null
+  /** Vencimento do residual no pagamento parcial; default: vencimento original. */
+  residual_due_date?: string | null // "YYYY-MM-DD"
 }
 
 /**
