@@ -1569,7 +1569,7 @@ export default function DespesasPage() {
       {/* Cards de resumo */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* Eixo competência: o que VENCE no mês — é o que a lista abaixo mostra. */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Contas do mês"
             value={formatCents(summary?.due.total_cents ?? 0)}
@@ -1580,7 +1580,7 @@ export default function DespesasPage() {
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Pago"
             value={formatCents(summary?.due.paid_cents ?? 0)}
@@ -1592,7 +1592,7 @@ export default function DespesasPage() {
             color="error.main"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="A pagar"
             value={formatCents(summary?.due.open_cents ?? 0)}
@@ -1601,7 +1601,7 @@ export default function DespesasPage() {
           />
         </Grid>
         {/* Eixo caixa: o que foi PAGO no mês, qualquer vencimento — o número da dashboard. */}
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
           <StatCard
             label="Saiu do caixa"
             value={formatCents(summary?.cash.paid_cents ?? 0)}
@@ -1610,6 +1610,21 @@ export default function DespesasPage() {
                 ? `${summary.cash.paid_count} pagamentos em ${monthLabel}, qualquer vencimento · igual à dashboard`
                 : 'Carregando…'
             }
+          />
+        </Grid>
+        {/* Indicador: quanto a família perdeu por atrasar (encargos dos pagamentos do mês). */}
+        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+          <StatCard
+            label="Juros e multa"
+            value={formatCents(summary?.cash.late_charges_cents ?? 0)}
+            hint={
+              summary
+                ? summary.cash.late_charges_count > 0
+                  ? `${summary.cash.late_charges_count} ${summary.cash.late_charges_count === 1 ? 'pagamento' : 'pagamentos'} com atraso em ${monthLabel}`
+                  : `Nenhum encargo pago em ${monthLabel}`
+                : 'Carregando…'
+            }
+            color={(summary?.cash.late_charges_cents ?? 0) > 0 ? 'warning.main' : undefined}
           />
         </Grid>
       </Grid>
