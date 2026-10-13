@@ -15,7 +15,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -58,12 +57,15 @@ import {
   ENTRY_STATUS_LABEL,
   errorMessage,
   EXPENSE_CATEGORY_LABEL,
-  EXPENSE_CATEGORY_OPTIONS,
+  INVOICE_RECURRENCE_OPTIONS,
   financeKeys,
   MONTH_OPTIONS,
 } from '../constants'
 import { useYearOptions } from '../hooks/useYearOptions'
+import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -175,21 +177,15 @@ function InvoiceFormDialog({
             control={control}
             rules={{ required: 'Selecione o cartão' }}
             render={({ field }) => (
-              <TextField
-                {...field}
-                select
+              <AutocompleteField
                 label="Cartão"
-                fullWidth
                 required
+                value={field.value}
+                onChange={field.onChange}
+                options={cards.map((c) => ({ value: c.id, label: c.name }))}
                 error={Boolean(errors.card_id)}
                 helperText={errors.card_id?.message}
-              >
-                {cards.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+              />
             )}
           />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -233,10 +229,13 @@ function InvoiceFormDialog({
             name="recurrence"
             control={control}
             render={({ field }) => (
-              <TextField {...field} select label="Recorrência" fullWidth>
-                <MenuItem value="none">Nenhuma</MenuItem>
-                <MenuItem value="monthly">Mensal (até dezembro)</MenuItem>
-              </TextField>
+              <AutocompleteField
+                label="Recorrência"
+                value={field.value}
+                onChange={field.onChange}
+                options={INVOICE_RECURRENCE_OPTIONS}
+                disableClearable
+              />
             )}
           />
           <Controller
@@ -282,6 +281,7 @@ function PurchaseFormDialog({
 }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const { activeCategories } = useExpenseCategories()
 
   const {
     control,
@@ -386,13 +386,18 @@ function PurchaseFormDialog({
             name="type"
             control={control}
             render={({ field }) => (
-              <TextField {...field} select label="Categoria" fullWidth>
-                {EXPENSE_CATEGORY_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <AutocompleteField
+                label="Categoria"
+                value={field.value}
+                onChange={field.onChange}
+                options={activeCategories.map((cat) => ({
+                  value: cat.slug,
+                  label: cat.name,
+                  description: cat.group_name,
+                }))}
+                placeholder="Busque por nome ou grupo"
+                disableClearable
+              />
             )}
           />
         </Stack>
@@ -788,53 +793,34 @@ export default function FaturasPage() {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Cartão"
-                fullWidth
                 size="small"
+                emptyLabel="Todos"
                 value={filters.card_id}
-                onChange={(e) => setFilter('card_id', e.target.value)}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {cards.map((c) => (
-                  <MenuItem key={c.id} value={c.id}>
-                    {c.name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setFilter('card_id', v)}
+                options={cards.map((c) => ({ value: c.id, label: c.name }))}
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Mês"
-                fullWidth
                 size="small"
-                value={filters.month}
-                onChange={(e) => setFilter('month', Number(e.target.value))}
-              >
-                {MONTH_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                value={String(filters.month)}
+                onChange={(v) => setFilter('month', Number(v))}
+                options={numericOptions(MONTH_OPTIONS)}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Ano"
-                fullWidth
                 size="small"
-                value={filters.year}
-                onChange={(e) => setFilter('year', Number(e.target.value))}
-              >
-                {yearsList.map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </TextField>
+                value={String(filters.year)}
+                onChange={(v) => setFilter('year', Number(v))}
+                options={numericOptions(yearsList)}
+                disableClearable
+              />
             </Grid>
           </Grid>
         </CardContent>

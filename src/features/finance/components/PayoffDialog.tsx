@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  MenuItem,
   Step,
   StepLabel,
   Stepper,
@@ -207,19 +206,15 @@ export function PayoffDialog({
 
             {payer === 'proprio' ? (
               <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                <TextField
-                  select
+                <AutocompleteField
                   label="Forma de pagamento"
-                  value={method}
-                  onChange={(e) => setMethod(e.target.value as PaymentMethod)}
+                  fullWidth={false}
                   sx={{ minWidth: 200, flex: 1 }}
-                >
-                  {PAYMENT_METHOD_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  value={method}
+                  onChange={(v) => setMethod(v as PaymentMethod)}
+                  options={PAYMENT_METHOD_OPTIONS}
+                  disableClearable
+                />
                 {needsAccount && (
                   <Box sx={{ minWidth: 200, flex: 1 }}>
                     <AutocompleteField

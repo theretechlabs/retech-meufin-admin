@@ -16,7 +16,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -84,6 +83,7 @@ import {
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { useYearOptions } from '../hooks/useYearOptions'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -916,19 +916,14 @@ function EntryFormDialog({
               name="recurrence"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
+                <AutocompleteField
                   label="Recorrência"
-                  fullWidth
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={RECURRENCE_OPTIONS}
                   disabled={isEdit || installments}
-                >
-                  {RECURRENCE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  disableClearable
+                />
               )}
             />
           </Stack>
@@ -1427,70 +1422,44 @@ export default function DespesasPage() {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Membro"
-                fullWidth
                 size="small"
+                emptyLabel="Todos"
                 value={filters.family_member_id}
-                onChange={(e) => setFilter('family_member_id', e.target.value)}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {(membersQuery.data ?? []).map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.full_name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setFilter('family_member_id', v)}
+                options={(membersQuery.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Mês"
-                fullWidth
                 size="small"
-                value={filters.month}
-                onChange={(e) => setFilter('month', Number(e.target.value))}
-              >
-                {MONTH_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                value={String(filters.month)}
+                onChange={(v) => setFilter('month', Number(v))}
+                options={numericOptions(MONTH_OPTIONS)}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Ano"
-                fullWidth
                 size="small"
-                value={filters.year}
-                onChange={(e) => setFilter('year', Number(e.target.value))}
-              >
-                {yearsList.map((y) => (
-                  <MenuItem key={y} value={y}>
-                    {y}
-                  </MenuItem>
-                ))}
-              </TextField>
+                value={String(filters.year)}
+                onChange={(v) => setFilter('year', Number(v))}
+                options={numericOptions(yearsList)}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 6, md: 2 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Status"
-                fullWidth
                 size="small"
+                emptyLabel="Todos"
                 value={filters.status}
-                onChange={(e) => setFilter('status', e.target.value)}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {ENTRY_STATUS_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setFilter('status', v)}
+                options={ENTRY_STATUS_OPTIONS}
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <AutocompleteField

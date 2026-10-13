@@ -11,11 +11,9 @@ import {
   DialogTitle,
   IconButton,
   Divider,
-  MenuItem,
   Radio,
   RadioGroup,
   FormControlLabel,
-  ListItemText,
   Step,
   StepLabel,
   Stepper,
@@ -48,7 +46,7 @@ import {
   type ExtractionStatus,
   type FiscalItemSuggestion,
 } from '../api'
-import { errorMessage, financeKeys } from '../constants'
+import { errorMessage, financeKeys, SETTLEABLE_STATUS_OPTIONS } from '../constants'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { MoneyField } from '@/components/fields/MoneyField'
@@ -471,32 +469,27 @@ export function ImportFiscalDialog({
                         />
                       </TableCell>
                       <TableCell>
-                        <TextField
-                          select
-                          variant="standard"
-                          fullWidth
+                        <AutocompleteField
+                          label="Categoria"
+                          size="small"
+                          emptyLabel="—"
                           value={it.category}
-                          onChange={(e) => setItem(idx, { category: e.target.value })}
-                        >
-                          <MenuItem value="">
-                            <em>—</em>
-                          </MenuItem>
-                          {/* Categoria nova sugerida que ainda não existe no catálogo. */}
-                          {it.suggestedNew &&
-                            !activeCategories.some((c) => c.slug === it.suggestedNew!.slug) && (
-                              <MenuItem value={it.suggestedNew.slug}>
-                                <ListItemText
-                                  primary={it.suggestedNew.name}
-                                  secondary="nova — será criada ao salvar"
-                                />
-                              </MenuItem>
-                            )}
-                          {activeCategories.map((c) => (
-                            <MenuItem key={c.slug} value={c.slug}>
-                              {c.name}
-                            </MenuItem>
-                          ))}
-                        </TextField>
+                          onChange={(v) => setItem(idx, { category: v })}
+                          options={[
+                            // Categoria nova sugerida que ainda não existe no catálogo.
+                            ...(it.suggestedNew &&
+                            !activeCategories.some((c) => c.slug === it.suggestedNew!.slug)
+                              ? [
+                                  {
+                                    value: it.suggestedNew.slug,
+                                    label: it.suggestedNew.name,
+                                    description: 'nova — será criada ao salvar',
+                                  },
+                                ]
+                              : []),
+                            ...activeCategories.map((c) => ({ value: c.slug, label: c.name })),
+                          ]}
+                        />
                         {it.suggestedNew && it.category === it.suggestedNew.slug && (
                           <Chip size="small" color="info" variant="outlined" label="nova categoria" sx={{ mt: 0.5 }} />
                         )}
@@ -543,16 +536,15 @@ export function ImportFiscalDialog({
                   onChange={setNewCategory}
                   options={activeCategories.map((c) => ({ value: c.slug, label: c.name }))}
                 />
-                <TextField
-                  select
+                <AutocompleteField
                   label="Status"
+                  fullWidth={false}
+                  sx={{ minWidth: 200 }}
                   value={newStatus}
-                  onChange={(e) => setNewStatus(e.target.value as 'prevista' | 'realizada')}
-                  sx={{ minWidth: 160 }}
-                >
-                  <MenuItem value="realizada">Realizada (já paga)</MenuItem>
-                  <MenuItem value="prevista">Prevista</MenuItem>
-                </TextField>
+                  onChange={(v) => setNewStatus(v as 'prevista' | 'realizada')}
+                  options={SETTLEABLE_STATUS_OPTIONS}
+                  disableClearable
+                />
                 <Typography variant="caption" color="text.secondary" sx={{ width: '100%' }}>
                   Descrição: “{merchant.trim() || 'Compra (cupom fiscal)'}” — {formatCents(acceptedTotalCents)} em {formatDateBR(purchaseDate || todayIso())}.
                 </Typography>

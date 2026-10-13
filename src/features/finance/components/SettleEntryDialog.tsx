@@ -7,7 +7,6 @@ import {
   DialogContent,
   DialogTitle,
   Divider,
-  MenuItem,
   Stack,
   TextField,
   Typography,
@@ -402,26 +401,18 @@ export function SettleEntryDialog({
               name="payment_method"
               control={control}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
+                <AutocompleteField
                   label={isExpense ? 'Forma de pagamento' : 'Forma de recebimento'}
-                  fullWidth
+                  emptyLabel="Não informar"
+                  value={field.value}
+                  onChange={(v) => field.onChange(v as PaymentMethod | '')}
+                  options={PAYMENT_METHOD_OPTIONS}
                   helperText={
                     field.value
                       ? undefined
                       : 'Opcional, mas registra de onde saiu (ou onde entrou) o dinheiro.'
                   }
-                >
-                  <MenuItem value="">
-                    <em>Não informar</em>
-                  </MenuItem>
-                  {PAYMENT_METHOD_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                />
               )}
             />
           )}

@@ -5,9 +5,7 @@ import {
   Card,
   CardContent,
   Grid,
-  MenuItem,
   Stack,
-  TextField,
   Typography,
   useTheme,
 } from '@mui/material'
@@ -45,6 +43,8 @@ import { CategoryEntriesDialog } from '../components/CategoryEntriesDialog'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 
 /**
  * Legenda do "esperado no mês" com estado: distingue "tudo realizado" de
@@ -216,51 +216,36 @@ export default function FinanceDashboardPage() {
         subtitle="Como estou este mês, o que ainda vem, pra onde foi o dinheiro e o que já está comprometido."
         action={
           <Stack direction="row" spacing={1.5}>
-            <TextField
-              select
-              size="small"
+            <AutocompleteField
               label="Mês"
-              value={month}
-              onChange={(e) => setMonth(Number(e.target.value))}
-              sx={{ minWidth: 130 }}
-            >
-              {MONTH_OPTIONS.map((m) => (
-                <MenuItem key={m.value} value={m.value}>
-                  {m.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
               size="small"
+              fullWidth={false}
+              sx={{ minWidth: 160 }}
+              value={String(month)}
+              onChange={(v) => setMonth(Number(v))}
+              options={numericOptions(MONTH_OPTIONS)}
+              disableClearable
+            />
+            <AutocompleteField
               label="Ano"
-              value={year}
-              onChange={(e) => setYear(Number(e.target.value))}
-              sx={{ minWidth: 100 }}
-            >
-              {yearsList.map((y) => (
-                <MenuItem key={y} value={y}>
-                  {y}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
               size="small"
+              fullWidth={false}
+              sx={{ minWidth: 120 }}
+              value={String(year)}
+              onChange={(v) => setYear(Number(v))}
+              options={numericOptions(yearsList)}
+              disableClearable
+            />
+            <AutocompleteField
               label="Membro"
+              size="small"
+              fullWidth={false}
+              sx={{ minWidth: 200 }}
+              emptyLabel="Todos"
               value={familyMemberId}
-              onChange={(e) => setFamilyMemberId(e.target.value)}
-              sx={{ minWidth: 150 }}
-            >
-              <MenuItem value="">
-                <em>Todos</em>
-              </MenuItem>
-              {(members ?? []).map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.full_name}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setFamilyMemberId}
+              options={(members ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+            />
           </Stack>
         }
       />

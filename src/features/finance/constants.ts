@@ -168,6 +168,40 @@ export const ENTRY_STATUS_OPTIONS: Option<EntryStatus>[] = [
   { value: 'cancelada', label: 'Cancelada' },
 ]
 
+/** Status que um lançamento importado (fatura, cupom) pode nascer. */
+export const SETTLEABLE_STATUS_OPTIONS: Option<EntryStatus>[] = [
+  { value: 'realizada', label: 'Realizada (já paga)' },
+  { value: 'prevista', label: 'Prevista' },
+]
+
+/** Recorrência de fatura de cartão: só nenhuma ou mensal (até dezembro). */
+export const INVOICE_RECURRENCE_OPTIONS: Option<Recurrence>[] = [
+  { value: 'none', label: 'Nenhuma' },
+  { value: 'monthly', label: 'Mensal (até dezembro)' },
+]
+
+/** Origem de um parcelamento (filtro). */
+export const INSTALLMENT_SOURCE_OPTIONS: Option<'invoice' | 'expense'>[] = [
+  { value: 'invoice', label: 'Fatura de cartão' },
+  { value: 'expense', label: 'Despesa parcelada' },
+]
+
+/** Tipo de conta bancária do fornecedor. */
+export const BANK_ACCOUNT_TYPE_OPTIONS: Option<'corrente' | 'poupanca'>[] = [
+  { value: 'corrente', label: 'Corrente' },
+  { value: 'poupanca', label: 'Poupança' },
+]
+
+/** Filtro Ativas/Arquivadas (contas, fontes, categorias) e Ativos/Arquivados (cartões). */
+export const ARCHIVED_FILTER_OPTIONS_F: Option<'true' | 'false'>[] = [
+  { value: 'true', label: 'Ativas' },
+  { value: 'false', label: 'Arquivadas' },
+]
+export const ARCHIVED_FILTER_OPTIONS_M: Option<'true' | 'false'>[] = [
+  { value: 'true', label: 'Ativos' },
+  { value: 'false', label: 'Arquivados' },
+]
+
 export const ENTRY_STATUS_LABEL: Record<EntryStatus, string> = ENTRY_STATUS_OPTIONS.reduce(
   (acc, o) => ({ ...acc, [o.value]: o.label }),
   {} as Record<EntryStatus, string>

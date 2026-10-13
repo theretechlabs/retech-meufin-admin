@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -37,12 +36,13 @@ import {
   type FinanceAccount,
   type FinanceAccountInput,
 } from '../api'
-import { ACCOUNT_KIND_LABEL, ACCOUNT_KIND_OPTIONS, errorMessage, financeKeys } from '../constants'
+import { ACCOUNT_KIND_LABEL, ACCOUNT_KIND_OPTIONS, errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 type FormValues = FinanceAccountInput
 
@@ -131,13 +131,14 @@ function AccountFormDialog({
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
-              <TextField {...field} select label="Tipo" fullWidth required>
-                {ACCOUNT_KIND_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <AutocompleteField
+                label="Tipo"
+                required
+                value={field.value}
+                onChange={field.onChange}
+                options={ACCOUNT_KIND_OPTIONS}
+                disableClearable
+              />
             )}
           />
           <Controller
@@ -270,43 +271,32 @@ export default function ContasPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={kind}
-            onChange={(e) => {
-              setKind(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Tipo"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {ACCOUNT_KIND_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
+            emptyLabel="Todos"
+            value={kind}
+            onChange={(v) => {
+              setKind(v)
               setPage(0)
             }}
+            options={ACCOUNT_KIND_OPTIONS}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            <MenuItem value="true">Ativas</MenuItem>
-            <MenuItem value="false">Arquivadas</MenuItem>
-          </TextField>
+            emptyLabel="Todas"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ARCHIVED_FILTER_OPTIONS_F}
+          />
         </Stack>
       </Card>
 

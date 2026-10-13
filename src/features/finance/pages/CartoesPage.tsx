@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -38,7 +37,7 @@ import {
   type CreditCard,
   type CreditCardInput,
 } from '../api'
-import { CARD_BANK_LABEL, CARD_BANK_OPTIONS, errorMessage, financeKeys } from '../constants'
+import { CARD_BANK_LABEL, CARD_BANK_OPTIONS, errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_M } from '../constants'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -181,16 +180,13 @@ function CardFormDialog({
               name="brand"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Bandeira" fullWidth>
-                  <MenuItem value="">
-                    <em>Não informada</em>
-                  </MenuItem>
-                  {(brandsQuery.data ?? []).map((b) => (
-                    <MenuItem key={b.slug} value={b.slug}>
-                      {b.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Bandeira"
+                  emptyLabel="Não informada"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={(brandsQuery.data ?? []).map((b) => ({ value: b.slug, label: b.name }))}
+                />
               )}
             />
           </Stack>
@@ -350,23 +346,19 @@ export default function CartoesPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            <MenuItem value="true">Ativos</MenuItem>
-            <MenuItem value="false">Arquivados</MenuItem>
-          </TextField>
+            emptyLabel="Todos"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ARCHIVED_FILTER_OPTIONS_M}
+          />
         </Stack>
       </Card>
 

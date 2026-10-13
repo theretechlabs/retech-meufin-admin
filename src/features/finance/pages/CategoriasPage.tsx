@@ -11,7 +11,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -38,7 +37,7 @@ import {
   type ExpenseCategory,
   type ExpenseGroup,
 } from '../api'
-import { errorMessage, financeKeys } from '../constants'
+import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -253,43 +252,32 @@ export default function CategoriasPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={group}
-            onChange={(e) => {
-              setGroup(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Grupo"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 220 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {groups.map((g) => (
-              <MenuItem key={g.slug} value={g.slug}>
-                {g.name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
+            emptyLabel="Todos"
+            value={group}
+            onChange={(v) => {
+              setGroup(v)
               setPage(0)
             }}
+            options={groups.map((g) => ({ value: g.slug, label: g.name }))}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todas</em>
-            </MenuItem>
-            <MenuItem value="true">Ativas</MenuItem>
-            <MenuItem value="false">Arquivadas</MenuItem>
-          </TextField>
+            emptyLabel="Todas"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ARCHIVED_FILTER_OPTIONS_F}
+          />
         </Stack>
       </Card>
 

@@ -1,28 +1,48 @@
-import { Autocomplete, TextField, Typography, Stack } from '@mui/material'
+import {
+  Autocomplete,
+  TextField,
+  Typography,
+  Stack,
+  type SxProps,
+  type Theme,
+} from "@mui/material";
+import {
+  matchesOption,
+  normalizeSearch,
+  type AutocompleteOption,
+} from "./options";
 
-export type AutocompleteOption = {
-  value: string
-  label: string
-  /** Linha secundária exibida na lista (ex.: exemplos do grupo) — também pesquisável. */
-  description?: string
-  /** Termos extras pesquisáveis que não aparecem na UI. */
-  keywords?: string
-}
-
-/** Busca acento-insensível e case-insensível. */
-function normalize(s: string): string {
-  return s
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '')
-}
+export type AutocompleteFieldProps = {
+  options: AutocompleteOption[];
+  value: string;
+  onChange: (value: string) => void;
+  label: string;
+  placeholder?: string;
+  /** Se definido, inclui a opção "vazio" (value '') com esse rótulo — ex.: "Todos", "Não informar". */
+  emptyLabel?: string;
+  size?: "small" | "medium";
+  required?: boolean;
+  fullWidth?: boolean;
+  disabled?: boolean;
+  error?: boolean;
+  helperText?: string;
+  autoFocus?: boolean;
+  /** Sem o "x" de limpar: para campos obrigatórios sem estado vazio válido. */
+  disableClearable?: boolean;
+  loading?: boolean;
+  sx?: SxProps<Theme>;
+};
 
 /**
- * Autocomplete padrão do sistema para listas de entidades (categorias, grupos,
- * fontes, membros, cartões...). A busca casa nome, descrição E keywords —
- * digitar "cinema" acha o grupo "Lazer & Cultura" pelos exemplos. Fechado,
- * mostra só o label (nada de descrição empilhada). Para enums minúsculos
- * (status, recorrência), continue com select nativo.
+ * Seletor padrão do sistema para listas em memória: enums, catálogos e
+ * entidades limitadas (cartões, contas, membros). Digitar filtra por nome,
+ * descrição E keywords — "cinema" acha o grupo "Lazer & Cultura" pelos
+ * exemplos. Fechado, mostra só o label.
+ *
+ * Regra do projeto (CLAUDE.md): nenhuma página usa <TextField select>,
+ * <Select> ou <Autocomplete> direto. Lista que cresce sem limite (fornecedores,
+ * marcadores…) usa AsyncAutocompleteField; seleção múltipla usa
+ * MultiAutocompleteField.
  */
 export function AutocompleteField({
   options,
@@ -37,47 +57,35 @@ export function AutocompleteField({
   disabled,
   error,
   helperText,
+  autoFocus,
+  disableClearable,
+  loading,
   sx,
-}: {
-  options: AutocompleteOption[]
-  value: string
-  onChange: (value: string) => void
-  label: string
-  placeholder?: string
-  /** Se definido, inclui a opção "vazio" (value '') com esse rótulo — ex.: "Não atribuída". */
-  emptyLabel?: string
-  size?: 'small' | 'medium'
-  required?: boolean
-  fullWidth?: boolean
-  disabled?: boolean
-  error?: boolean
-  helperText?: string
-  sx?: object
-}) {
+}: AutocompleteFieldProps) {
   const all: AutocompleteOption[] = emptyLabel
-    ? [{ value: '', label: emptyLabel }, ...options]
-    : options
+    ? [{ value: "", label: emptyLabel }, ...options]
+    : options;
 
-  const selected = all.find((o) => o.value === value) ?? null
+  const selected = all.find((o) => o.value === value) ?? null;
 
   return (
     <Autocomplete
       options={all}
       value={selected}
-      onChange={(_, opt) => onChange(opt?.value ?? '')}
+      onChange={(_, opt) => onChange(opt?.value ?? "")}
       getOptionLabel={(o) => o.label}
       isOptionEqualToValue={(o, v) => o.value === v.value}
       disabled={disabled}
+      disableClearable={disableClearable}
+      loading={loading}
       size={size}
       fullWidth={fullWidth}
       sx={sx}
       noOptionsText="Nada encontrado"
       filterOptions={(opts, state) => {
-        const q = normalize(state.inputValue.trim())
-        if (!q) return opts
-        return opts.filter((o) =>
-          normalize(`${o.label} ${o.description ?? ''} ${o.keywords ?? ''}`).includes(q)
-        )
+        const q = normalizeSearch(state.inputValue.trim());
+        if (!q) return opts;
+        return opts.filter((o) => matchesOption(o, q));
       }}
       renderOption={(props, o) => (
         <li {...props} key={o.value}>
@@ -99,8 +107,9 @@ export function AutocompleteField({
           required={required}
           error={error}
           helperText={helperText}
+          autoFocus={autoFocus}
         />
       )}
     />
-  )
+  );
 }

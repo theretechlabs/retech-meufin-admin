@@ -10,7 +10,6 @@ import {
   DialogTitle,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Stack,
   Switch,
   TextField,
@@ -46,6 +45,7 @@ import {
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { RECEIPT_ACCEPT } from './EntryReceiptsSection'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 /** Rascunho de anexo antes do upload (usado no form de criação e no diálogo de adicionar). */
 export type AttachmentDraft = {
@@ -151,22 +151,15 @@ function DraftFields({
   const pixDynamic = draft.attachment_type === 'pix_qrcode' && isPixDynamic(draft.payment_code)
   return (
     <Stack spacing={1.5}>
-      <TextField
-        select
-        size="small"
+      <AutocompleteField
         label="Tipo"
+        size="small"
         value={draft.attachment_type}
         autoFocus={autoFocusType}
-        onChange={(e) =>
-          onChange({ ...draft, attachment_type: e.target.value as EntryAttachmentType })
-        }
-      >
-        {ATTACHMENT_TYPE_OPTIONS.map((o) => (
-          <MenuItem key={o.value} value={o.value}>
-            {o.label}
-          </MenuItem>
-        ))}
-      </TextField>
+        onChange={(v) => onChange({ ...draft, attachment_type: v as EntryAttachmentType })}
+        options={ATTACHMENT_TYPE_OPTIONS}
+        disableClearable
+      />
       {showCode && (
         <TextField
           size="small"

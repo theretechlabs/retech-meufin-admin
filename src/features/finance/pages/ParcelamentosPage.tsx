@@ -9,7 +9,6 @@ import {
   Grid,
   InputAdornment,
   LinearProgress,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -56,7 +55,7 @@ import {
   listCardsIncludingInactive,
 } from '../api'
 import type { InstallmentGroup, MonthlyCommitment } from '../api'
-import { errorMessage, financeKeys } from '../constants'
+import { errorMessage, financeKeys, INSTALLMENT_SOURCE_OPTIONS } from '../constants'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -256,21 +255,14 @@ export default function ParcelamentosPage() {
                   />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3, md: 3 }}>
-                  <TextField
-                    select
+                  <AutocompleteField
                     label="Cartão"
-                    fullWidth
                     size="small"
+                    emptyLabel="Todos"
                     value={cardFilter}
-                    onChange={(e) => setCardFilter(e.target.value)}
-                  >
-                    <MenuItem value="">Todos</MenuItem>
-                    {(cardsQuery.data ?? []).map((c) => (
-                      <MenuItem key={c.id} value={c.id}>
-                        {c.name}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    onChange={setCardFilter}
+                    options={(cardsQuery.data ?? []).map((c) => ({ value: c.id, label: c.name }))}
+                  />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3, md: 2 }}>
                   <AutocompleteField
@@ -287,18 +279,14 @@ export default function ParcelamentosPage() {
                   />
                 </Grid>
                 <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-                  <TextField
-                    select
+                  <AutocompleteField
                     label="Origem"
-                    fullWidth
                     size="small"
+                    emptyLabel="Todas"
                     value={sourceFilter}
-                    onChange={(e) => setSourceFilter(e.target.value)}
-                  >
-                    <MenuItem value="">Todas</MenuItem>
-                    <MenuItem value="invoice">Fatura de cartão</MenuItem>
-                    <MenuItem value="expense">Despesa parcelada</MenuItem>
-                  </TextField>
+                    onChange={setSourceFilter}
+                    options={INSTALLMENT_SOURCE_OPTIONS}
+                  />
                 </Grid>
               </Grid>
             </CardContent>
