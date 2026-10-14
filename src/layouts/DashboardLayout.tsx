@@ -7,12 +7,16 @@ import {
   LAYOUT_DRAWER_MINI_WIDTH,
 } from '@/components/layout/MainHeader'
 import { SidebarNav } from '@/components/layout/SidebarNav'
+import { useCatalogs } from '@/lib/catalogs/useCatalog'
 import { useUiStore } from '@/store/uiStore'
 
 export function DashboardLayout() {
   const theme = useTheme()
   const isLg = useMediaQuery(theme.breakpoints.up('lg'))
   const { sidebarOpen, setSidebarOpen, sidebarCollapsed } = useUiStore()
+  // Catálogos de enum (rótulos da API): uma chamada por sessão, logo após o
+  // login, para as páginas já encontrarem os rótulos em cache.
+  useCatalogs()
 
   useEffect(() => {
     if (isLg) setSidebarOpen(false)

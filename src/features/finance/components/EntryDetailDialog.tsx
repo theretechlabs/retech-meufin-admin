@@ -13,12 +13,8 @@ import {
 } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { formatCents, listEntryEvents, type Entry, type EntryEvent } from '../api'
-import {
-  ENTRY_STATUS_LABEL,
-  errorMessage,
-  financeKeys,
-  PAYMENT_METHOD_LABEL,
-} from '../constants'
+import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { EntryReceiptsSection } from './EntryReceiptsSection'
 import { EntryAttachmentsSection } from './EntryAttachments'
@@ -81,6 +77,8 @@ function eventDetail(ev: EntryEvent): string {
  */
 export function EntryDetailDialog({ entry, onClose }: { entry: Entry; onClose: () => void }) {
   const { labelOf } = useExpenseCategories()
+  const entryStatus = useCatalog('finance.entry_status')
+  const paymentMethod = useCatalog('finance.payment_method')
 
   const eventsQ = useQuery({
     queryKey: [...financeKeys.all, 'entry-events', entry.id] as const,
@@ -107,7 +105,7 @@ export function EntryDetailDialog({ entry, onClose }: { entry: Entry; onClose: (
                     ? 'warning'
                     : 'default'
               }
-              label={ENTRY_STATUS_LABEL[entry.status]}
+              label={entryStatus.labelOf(entry.status)}
             />
             <Chip size="small" variant="outlined" label={isIncome ? 'Receita' : 'Despesa'} />
             {entry.installment_number && entry.installment_total && (
@@ -137,7 +135,7 @@ export function EntryDetailDialog({ entry, onClose }: { entry: Entry; onClose: (
             />
             <Field
               label="Forma de pagamento"
-              value={entry.payment_method ? PAYMENT_METHOD_LABEL[entry.payment_method] : undefined}
+              value={entry.payment_method ? paymentMethod.labelOf(entry.payment_method) : undefined}
             />
             <Field
               label="Desconto"

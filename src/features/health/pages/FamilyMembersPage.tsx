@@ -47,7 +47,8 @@ import { AvatarCropDialog } from '@/components/common/AvatarCropDialog'
 import { DecimalField, formatDecimalBR, parseDecimalBR } from '@/components/fields/DecimalField'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { ACTIVE_FILTER_OPTIONS } from '@/components/fields/options'
-import { errorMessage, GENDER_OPTIONS, healthKeys, RELATIONSHIP_LABEL, RELATIONSHIP_OPTIONS } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -117,6 +118,8 @@ function MemberFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(member)
+  const relationshipCatalog = useCatalog('health.relationship')
+  const genderCatalog = useCatalog('health.gender')
 
   const {
     control,
@@ -283,7 +286,8 @@ function MemberFormDialog({
                   label="Parentesco"
                   value={field.value}
                   onChange={field.onChange}
-                  options={RELATIONSHIP_OPTIONS}
+                  options={relationshipCatalog.options}
+                  loading={relationshipCatalog.isLoading}
                   required
                   disableClearable
                 />
@@ -317,7 +321,8 @@ function MemberFormDialog({
                   emptyLabel="Não informado"
                   value={field.value ?? ''}
                   onChange={field.onChange}
-                  options={GENDER_OPTIONS}
+                  options={genderCatalog.options}
+                  loading={genderCatalog.isLoading}
                 />
               )}
             />
@@ -406,6 +411,7 @@ export default function FamilyMembersPage() {
   const [status, setStatus] = useState('')
   const [page, setPage] = useState(0)
   const [pageSize, setPageSize] = useState(20)
+  const relationshipCatalog = useCatalog('health.relationship')
 
   const params = useMemo(
     () => ({
@@ -485,7 +491,8 @@ export default function FamilyMembersPage() {
               setRelationship(v)
               setPage(0)
             }}
-            options={RELATIONSHIP_OPTIONS}
+            options={relationshipCatalog.options}
+            loading={relationshipCatalog.isLoading}
           />
           <AutocompleteField
             label="Status"
@@ -551,7 +558,7 @@ export default function FamilyMembersPage() {
                       </Avatar>
                     </TableCell>
                     <TableCell sx={{ fontWeight: 600 }}>{m.full_name}</TableCell>
-                    <TableCell>{RELATIONSHIP_LABEL[m.relationship] ?? m.relationship}</TableCell>
+                    <TableCell>{relationshipCatalog.labelOf(m.relationship)}</TableCell>
                     <TableCell>{formatBirthDate(m.birth_date)}</TableCell>
                     <TableCell align="center">
                       {m.age != null ? `${m.age} anos` : '—'}

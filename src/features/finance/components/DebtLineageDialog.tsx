@@ -35,7 +35,8 @@ import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
 import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
 import { useQuery } from '@tanstack/react-query'
 import { formatCents, getDebtLineage, type DebtStage, type Entry, type Renegotiation } from '../api'
-import { errorMessage, financeKeys, RENEGOTIATION_KIND_LABEL } from '../constants'
+import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
 function formatDateBR(iso?: string | null): string {
@@ -279,6 +280,7 @@ function StageCard({
  * lá, o salto de volta para o antecessor.
  */
 export function DebtLineageDialog({ groupId, onClose }: { groupId: string; onClose: () => void }) {
+  const renegotiationKind = useCatalog('finance.renegotiation_kind')
   const [gid, setGid] = useState(groupId)
   const q = useQuery({
     queryKey: financeKeys.debtLineage(gid),
@@ -421,7 +423,7 @@ export function DebtLineageDialog({ groupId, onClose }: { groupId: string; onClo
                       <CheckCircleRoundedIcon fontSize="small" color="success" />
                     )}
                     <Typography variant="body2" sx={{ flex: 1 }}>
-                      <strong>{RENEGOTIATION_KIND_LABEL[closedBy.kind]}</strong> em {formatDateBR(closedBy.date)}
+                      <strong>{renegotiationKind.labelOf(closedBy.kind)}</strong> em {formatDateBR(closedBy.date)}
                       {closedBy.payoff_cents != null && (
                         <>
                           : {formatCents(closedBy.settled_amount_cents)} em aberto quitados por{' '}

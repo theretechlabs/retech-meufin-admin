@@ -33,12 +33,8 @@ import {
   type PlanDocType,
   type PlanDocument,
 } from '../api'
-import {
-  errorMessage,
-  healthKeys,
-  PLAN_DOC_TYPE_LABEL,
-  PLAN_DOC_TYPE_OPTIONS,
-} from '../constants'
+import { errorMessage, healthKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from './StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
@@ -83,6 +79,7 @@ export function PlanDocumentsDialog({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const planDocType = useCatalog('health.plan_doc_type')
   const [file, setFile] = useState<File | null>(null)
   const [toDelete, setToDelete] = useState<PlanDocument | null>(null)
 
@@ -152,7 +149,8 @@ export function PlanDocumentsDialog({
                     label="Tipo de documento"
                     value={field.value}
                     onChange={field.onChange}
-                    options={PLAN_DOC_TYPE_OPTIONS}
+                    options={planDocType.options}
+                    loading={planDocType.isLoading}
                     required
                     disableClearable
                   />
@@ -261,7 +259,7 @@ export function PlanDocumentsDialog({
                       <TableCell sx={{ fontWeight: 600 }}>
                         {doc.doc_type === 'outro' && doc.label
                           ? doc.label
-                          : (PLAN_DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type)}
+                          : planDocType.labelOf(doc.doc_type)}
                       </TableCell>
                       <TableCell>{doc.doc_number || '—'}</TableCell>
                       <TableCell>

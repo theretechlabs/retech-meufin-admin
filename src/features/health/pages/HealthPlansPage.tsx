@@ -48,10 +48,9 @@ import {
   errorMessage,
   formatCents,
   healthKeys,
-  PLAN_TYPE_LABEL,
-  PLAN_TYPE_OPTIONS,
   toCents,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -111,6 +110,7 @@ function PlanFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(plan)
+  const planType = useCatalog('health.plan_type')
   const [form, setForm] = useState<PlanFormValues>(() => planToForm(plan))
   const [formError, setFormError] = useState<string | null>(null)
 
@@ -168,7 +168,8 @@ function PlanFormDialog({
               label="Modalidade"
               value={form.plan_type}
               onChange={(v) => patch({ plan_type: v as PlanType })}
-              options={PLAN_TYPE_OPTIONS}
+              options={planType.options}
+              loading={planType.isLoading}
               disableClearable
             />
           </Stack>
@@ -335,6 +336,7 @@ function MembersDialog({
 export default function HealthPlansPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const planType = useCatalog('health.plan_type')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<HealthPlan | null>(null)
   const [membersOf, setMembersOf] = useState<HealthPlan | null>(null)
@@ -431,7 +433,7 @@ export default function HealthPlansPage() {
                     </TableCell>
                     <TableCell>{p.operator || '—'}</TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={PLAN_TYPE_LABEL[p.plan_type] ?? p.plan_type} />
+                      <Chip size="small" variant="outlined" label={planType.labelOf(p.plan_type)} />
                     </TableCell>
                     <TableCell align="right">{formatCents(p.monthly_fee_cents)}</TableCell>
                     <TableCell>

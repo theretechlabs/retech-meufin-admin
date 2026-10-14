@@ -21,14 +21,8 @@ import SpeedRoundedIcon from '@mui/icons-material/SpeedRounded'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { listVehiclesPaged, type Vehicle } from '../api'
-import {
-  vehicleKeys,
-  FUEL_TYPE_LABEL,
-  VEHICLE_STATUS_COLOR,
-  VEHICLE_STATUS_LABEL,
-  formatKM,
-  formatMoney,
-} from '../constants'
+import { vehicleKeys, VEHICLE_STATUS_COLOR, formatKM, formatMoney } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { LoadingState, ErrorState, EmptyState } from '@/features/health/components/StateViews'
 
@@ -82,6 +76,8 @@ function StatCard({
 function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
   const navigate = useNavigate()
   const theme = useTheme()
+  const fuelType = useCatalog('vehicle.fuel_type')
+  const vehicleStatus = useCatalog('vehicle.vehicle_status')
   return (
     <Card sx={{ height: '100%' }}>
       <CardActionArea
@@ -96,7 +92,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
               </Typography>
               <Chip
                 size="small"
-                label={VEHICLE_STATUS_LABEL[vehicle.status]}
+                label={vehicleStatus.labelOf(vehicle.status)}
                 color={VEHICLE_STATUS_COLOR[vehicle.status]}
                 variant="filled"
               />
@@ -120,7 +116,7 @@ function VehicleCard({ vehicle }: { vehicle: Vehicle }) {
               )}
               <Chip
                 size="small"
-                label={FUEL_TYPE_LABEL[vehicle.fuel_type] ?? vehicle.fuel_type}
+                label={fuelType.labelOf(vehicle.fuel_type)}
                 variant="outlined"
                 sx={{ fontSize: 11 }}
               />

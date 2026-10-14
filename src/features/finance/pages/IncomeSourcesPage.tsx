@@ -36,7 +36,8 @@ import {
   type IncomeSource,
   type IncomeSourceInput,
 } from '../api'
-import { errorMessage, financeKeys, SOURCE_KIND_LABEL, SOURCE_KIND_OPTIONS, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
+import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -65,6 +66,7 @@ function SourceFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(source)
+  const sourceKind = useCatalog('finance.income_source_kind')
 
   const {
     control,
@@ -134,7 +136,8 @@ function SourceFormDialog({
                 required
                 value={field.value}
                 onChange={field.onChange}
-                options={SOURCE_KIND_OPTIONS}
+                options={sourceKind.options}
+                loading={sourceKind.isLoading}
                 disableClearable
               />
             )}
@@ -185,6 +188,7 @@ function SourceFormDialog({
 export default function IncomeSourcesPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const sourceKind = useCatalog('finance.income_source_kind')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<IncomeSource | null>(null)
   const [toDelete, setToDelete] = useState<IncomeSource | null>(null)
@@ -273,7 +277,8 @@ export default function IncomeSourcesPage() {
               setKind(v)
               setPage(0)
             }}
-            options={SOURCE_KIND_OPTIONS}
+            options={sourceKind.options}
+            loading={sourceKind.isLoading}
           />
           <AutocompleteField
             label="Status"
@@ -327,7 +332,7 @@ export default function IncomeSourcesPage() {
                 {sources.map((s) => (
                   <TableRow key={s.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{s.name}</TableCell>
-                    <TableCell>{SOURCE_KIND_LABEL[s.kind] ?? s.kind}</TableCell>
+                    <TableCell>{sourceKind.labelOf(s.kind)}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>{s.notes || '—'}</TableCell>
                     <TableCell>
                       <Chip

@@ -34,12 +34,8 @@ import {
   type Payer,
   type PaymentMethod,
 } from '../api'
-import {
-  ACCOUNT_PAYMENT_METHODS,
-  errorMessage,
-  financeKeys,
-  PAYMENT_METHOD_OPTIONS,
-} from '../constants'
+import { ACCOUNT_PAYMENT_METHODS, errorMessage, financeKeys } from '../constants'
+import { usePaymentMethods } from '../hooks/usePaymentMethods'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { addMonthsClamped, todayISO } from '../installments'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
@@ -96,6 +92,7 @@ export function AssetSwapDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const { activeCategories } = useExpenseCategories()
+  const paymentMethod = usePaymentMethods()
 
   const [step, setStep] = useState(0)
   const [date, setDate] = useState(todayISO())
@@ -356,7 +353,8 @@ export function AssetSwapDialog({
                         sx={{ minWidth: 200, flex: 1 }}
                         value={payoffMethod}
                         onChange={(v) => setPayoffMethod(v as PaymentMethod)}
-                        options={PAYMENT_METHOD_OPTIONS}
+                        options={paymentMethod.manualOptions}
+                        loading={paymentMethod.isLoading}
                         disableClearable
                       />
                       {payoffNeedsAccount && (
@@ -441,7 +439,8 @@ export function AssetSwapDialog({
                     sx={{ minWidth: 180, flex: 1 }}
                     value={cashMethod}
                     onChange={(v) => setCashMethod(v as PaymentMethod)}
-                    options={PAYMENT_METHOD_OPTIONS}
+                    options={paymentMethod.manualOptions}
+                    loading={paymentMethod.isLoading}
                     disableClearable
                   />
                   {cashNeedsAccount && (

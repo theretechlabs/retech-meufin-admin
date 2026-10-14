@@ -1,4 +1,4 @@
-import type { ItemCategory, ListStatus, Shift, Stage } from './api'
+import type { ListStatus } from './api'
 
 /** Ano corrente no fuso local: padrão dos filtros e formulários de ano letivo. */
 export const CURRENT_YEAR = new Date().getFullYear()
@@ -13,68 +13,11 @@ export const educationKeys = {
   list: (id: string) => [...educationKeys.all, 'list', id] as const,
 }
 
-export const STAGE_OPTIONS: { value: Stage; label: string }[] = [
-  { value: 'bercario', label: 'Berçário' },
-  { value: 'infantil', label: 'Educação Infantil' },
-  { value: 'fundamental1', label: 'Fundamental I' },
-  { value: 'fundamental2', label: 'Fundamental II' },
-  { value: 'medio', label: 'Ensino Médio' },
-  { value: 'tecnico', label: 'Técnico' },
-  { value: 'pre_vestibular', label: 'Pré-vestibular' },
-  { value: 'superior', label: 'Ensino Superior' },
-  { value: 'pos', label: 'Pós-graduação' },
-]
-
-export const STAGE_LABEL: Record<Stage, string> = STAGE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<Stage, string>,
-)
-
-export const SHIFT_OPTIONS: { value: Shift; label: string }[] = [
-  { value: 'manha', label: 'Manhã' },
-  { value: 'tarde', label: 'Tarde' },
-  { value: 'integral', label: 'Integral' },
-  { value: 'noite', label: 'Noite' },
-  { value: 'ead', label: 'EAD' },
-]
-
-export const SHIFT_LABEL: Record<Shift, string> = SHIFT_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<Shift, string>,
-)
-
-export const LIST_STATUS_OPTIONS: { value: ListStatus; label: string }[] = [
-  { value: 'planejada', label: 'Planejada' },
-  { value: 'em_compra', label: 'Em compra' },
-  { value: 'concluida', label: 'Concluída' },
-]
-
-export const LIST_STATUS_LABEL: Record<ListStatus, string> = LIST_STATUS_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<ListStatus, string>,
-)
-
 export const LIST_STATUS_COLOR: Record<ListStatus, 'default' | 'warning' | 'success'> = {
   planejada: 'default',
   em_compra: 'warning',
   concluida: 'success',
 }
-
-export const ITEM_CATEGORY_OPTIONS: { value: ItemCategory; label: string }[] = [
-  { value: 'papelaria', label: 'Papelaria' },
-  { value: 'livros', label: 'Livros' },
-  { value: 'uniforme', label: 'Uniforme' },
-  { value: 'mochila', label: 'Mochila' },
-  { value: 'eletronicos', label: 'Eletrônicos' },
-  { value: 'arte', label: 'Arte' },
-  { value: 'higiene', label: 'Higiene' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const ITEM_CATEGORY_LABEL: Record<ItemCategory, string> = ITEM_CATEGORY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<ItemCategory, string>,
-)
 
 // ─── Formatters ─────────────────────────────────────────────────────────────────
 

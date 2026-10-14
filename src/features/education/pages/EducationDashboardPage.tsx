@@ -36,15 +36,15 @@ import {
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { getEducationDashboard, type ItemCategory } from '../api'
+import { getEducationDashboard } from '../api'
 import {
   CURRENT_YEAR,
   educationKeys,
   errorMessage,
   formatCents,
   formatPct,
-  ITEM_CATEGORY_LABEL,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
@@ -116,6 +116,7 @@ export default function EducationDashboardPage() {
   const navigate = useNavigate()
   const [year, setYear] = useState<number>(CURRENT_YEAR)
   const years = useSchoolYears()
+  const itemCategory = useCatalog('education.item_category')
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: educationKeys.dashboard(year),
@@ -310,7 +311,7 @@ export default function EducationDashboardPage() {
                         data.by_category.map((ca) => (
                           <TableRow key={ca.category} hover>
                             <TableCell>
-                              {ITEM_CATEGORY_LABEL[ca.category as ItemCategory] ?? ca.category}
+                              {itemCategory.labelOf(ca.category)}
                             </TableCell>
                             <TableCell align="right">{ca.item_count}</TableCell>
                             <TableCell align="right">{ca.purchased_count}</TableCell>

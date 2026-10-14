@@ -32,14 +32,16 @@ import EventBusyRoundedIcon from '@mui/icons-material/EventBusyRounded'
 import PaidRoundedIcon from '@mui/icons-material/PaidRounded'
 import ShieldRoundedIcon from '@mui/icons-material/ShieldRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteWarranty, getWarrantySummary, listWarranties, type Warranty } from '../api'
+import {
+  deleteWarranty,
+  getWarrantySummary,
+  listWarranties,
+  type Warranty,
+  type WarrantyCategory,
+} from '../api'
 import {
   CATEGORY_ICON,
-  CATEGORY_LABEL,
-  CATEGORY_OPTIONS,
   STATUS_COLOR,
-  STATUS_LABEL,
-  STATUS_OPTIONS,
   errorMessage,
   formatDate,
   formatMoneyCents,
@@ -48,6 +50,7 @@ import {
 } from '../constants'
 import { WarrantyDocumentsDialog } from '../components/WarrantyDocumentsDialog'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { WarrantyFormDialog } from '../components/WarrantyFormDialog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -145,6 +148,8 @@ export default function WarrantiesPage() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('')
   const [status, setStatus] = useState('')
+  const categoryCatalog = useCatalog('warranty.category')
+  const statusCatalog = useCatalog('warranty.status')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Warranty | null>(null)
   const [docsFor, setDocsFor] = useState<Warranty | null>(null)
@@ -258,10 +263,11 @@ export default function WarrantiesPage() {
               emptyLabel="Todas"
               value={category}
               onChange={setCategory}
-              options={CATEGORY_OPTIONS.map((o) => ({
-                value: o.value,
-                label: `${CATEGORY_ICON[o.value]} ${o.label}`,
+              options={categoryCatalog.items.map((it) => ({
+                value: it.slug,
+                label: `${CATEGORY_ICON[it.slug as WarrantyCategory] ?? ''} ${it.name}`,
               }))}
+              loading={categoryCatalog.isLoading}
               fullWidth={false}
               sx={{ minWidth: 200 }}
             />
@@ -270,7 +276,8 @@ export default function WarrantiesPage() {
               emptyLabel="Todas"
               value={status}
               onChange={setStatus}
-              options={STATUS_OPTIONS}
+              options={statusCatalog.options}
+              loading={statusCatalog.isLoading}
               fullWidth={false}
               sx={{ minWidth: 200 }}
             />
@@ -326,13 +333,17 @@ export default function WarrantiesPage() {
                       <Chip
                         size="small"
                         variant="outlined"
-                        label={`${CATEGORY_ICON[w.category]} ${CATEGORY_LABEL[w.category]}`}
+                        label={`${CATEGORY_ICON[w.category]} ${categoryCatalog.labelOf(w.category)}`}
                       />
                     </TableCell>
                     <TableCell>{formatDate(w.purchase_date)}</TableCell>
                     <TableCell>{formatMoneyCents(w.price_cents)}</TableCell>
                     <TableCell>
-                      <Chip size="small" color={STATUS_COLOR[w.status]} label={STATUS_LABEL[w.status]} />
+                      <Chip
+                        size="small"
+                        color={STATUS_COLOR[w.status]}
+                        label={statusCatalog.labelOf(w.status)}
+                      />
                     </TableCell>
                     <TableCell>
                       <WarrantyProgress w={w} />

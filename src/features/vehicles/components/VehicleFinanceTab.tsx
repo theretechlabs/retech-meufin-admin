@@ -30,7 +30,8 @@ import {
   type DebtLineage,
   type Renegotiation,
 } from '@/features/finance/api'
-import { errorMessage, financeKeys, RENEGOTIATION_KIND_LABEL } from '@/features/finance/constants'
+import { errorMessage, financeKeys } from '@/features/finance/constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { AssetSwapDialog } from '@/features/finance/components/AssetSwapDialog'
 import { DebtLineageDialog } from '@/features/finance/components/DebtLineageDialog'
 import { PayoffDialog } from '@/features/finance/components/PayoffDialog'
@@ -159,6 +160,7 @@ function DebtCard({
 }
 
 function EventsTable({ events, vehicleId }: { events: Renegotiation[]; vehicleId: string }) {
+  const renegotiationKind = useCatalog('finance.renegotiation_kind')
   return (
     <TableContainer sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
       <Table size="small">
@@ -180,7 +182,7 @@ function EventsTable({ events, vehicleId }: { events: Renegotiation[]; vehicleId
                 <TableCell>{formatDateBR(ev.date)}</TableCell>
                 <TableCell>
                   <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                    <Chip size="small" variant="outlined" label={RENEGOTIATION_KIND_LABEL[ev.kind]} />
+                    <Chip size="small" variant="outlined" label={renegotiationKind.labelOf(ev.kind)} />
                     <Typography variant="body2">{ev.description}</Typography>
                     {role && (
                       <Typography variant="caption" color="text.secondary">

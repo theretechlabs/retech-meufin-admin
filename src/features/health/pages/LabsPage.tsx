@@ -31,7 +31,8 @@ import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { createLab, deleteLab, listLabsPaged, updateLab, type Lab, type LabInput } from '../api'
-import { errorMessage, healthKeys, LAB_KIND_LABEL, LAB_KIND_OPTIONS } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -65,6 +66,7 @@ function LabFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(lab)
+  const labKind = useCatalog('health.lab_kind')
 
   const {
     control,
@@ -138,7 +140,8 @@ function LabFormDialog({
                 label="Tipo de local"
                 value={field.value}
                 onChange={field.onChange}
-                options={LAB_KIND_OPTIONS}
+                options={labKind.options}
+                loading={labKind.isLoading}
                 disableClearable
               />
             )}
@@ -221,6 +224,7 @@ function LabFormDialog({
 export default function LabsPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const labKind = useCatalog('health.lab_kind')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Lab | null>(null)
   const [toDelete, setToDelete] = useState<Lab | null>(null)
@@ -350,7 +354,7 @@ export default function LabsPage() {
                   <TableRow key={l.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{l.name}</TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={LAB_KIND_LABEL[l.kind] ?? l.kind} />
+                      <Chip size="small" variant="outlined" label={labKind.labelOf(l.kind)} />
                     </TableCell>
                     <TableCell>{l.contact_phone || '—'}</TableCell>
                     <TableCell>

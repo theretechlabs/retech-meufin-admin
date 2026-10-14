@@ -32,6 +32,7 @@ import {
   type PanelMarker,
 } from '../api'
 import { errorMessage, healthKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import {
   MarkerChartDialog,
   MiniMarkerCard,
@@ -124,6 +125,7 @@ function StatCard({
 // ---------------------------------------------------------------------------
 
 export default function HealthDashboardPage() {
+  const markerCategory = useCatalog('health.marker_category')
   const [prefs, setPrefs] = useState<PanelPrefs>(loadPrefs)
   const [familyMemberId, setFamilyMemberId] = useState('')
   const [openMarker, setOpenMarker] = useState<PanelMarker | null>(null)
@@ -288,7 +290,7 @@ export default function HealthDashboardPage() {
                         sx={{ flex: 1, pr: 1 }}
                       >
                         <Typography fontWeight={800}>
-                          {panelTitle(panel.category)}{' '}
+                          {panelTitle(panel.category, markerCategory.labelOf(panel.category))}{' '}
                           <Typography component="span" color="text.secondary">
                             ({panel.markers.length})
                           </Typography>
@@ -364,7 +366,7 @@ export default function HealthDashboardPage() {
               {emptyPanels.length > 0 && (
                 <Typography variant="caption" color="text.secondary" sx={{ px: 1 }}>
                   Sem resultados ainda:{' '}
-                  {emptyPanels.map((p) => panelTitle(p.category)).join(', ')}.
+                  {emptyPanels.map((p) => panelTitle(p.category, markerCategory.labelOf(p.category))).join(', ')}.
                 </Typography>
               )}
             </Stack>

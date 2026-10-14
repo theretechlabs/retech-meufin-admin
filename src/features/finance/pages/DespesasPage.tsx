@@ -47,7 +47,6 @@ import TuneRoundedIcon from '@mui/icons-material/TuneRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import {
-  listDiscountReasons,
   listFiscalItems,
   reopenEntry,
   createEntry,
@@ -66,14 +65,12 @@ import {
 } from '../api'
 import {
   ENTRY_STATUS_COLOR,
-  ENTRY_STATUS_LABEL,
-  ENTRY_STATUS_OPTIONS,
   errorMessage,
   financeKeys,
   MONTH_OPTIONS,
-  RECURRENCE_LABEL,
-  RECURRENCE_OPTIONS,
-  seriesToast } from '../constants'
+  seriesToast,
+} from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { MoneyField } from '@/components/fields/MoneyField'
 import {
   createExpenseCategory,
@@ -448,6 +445,7 @@ function EntryFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(entry)
+  const recurrenceCatalog = useCatalog('finance.recurrence')
 
   const membersQuery = useQuery({
     queryKey: financeKeys.familyMembers(),
@@ -920,7 +918,8 @@ function EntryFormDialog({
                   label="Recorrência"
                   value={field.value}
                   onChange={field.onChange}
-                  options={RECURRENCE_OPTIONS}
+                  options={recurrenceCatalog.options}
+                  loading={recurrenceCatalog.isLoading}
                   disabled={isEdit || installments}
                   disableClearable
                 />
@@ -1235,10 +1234,9 @@ export default function DespesasPage() {
     queryKey: financeKeys.suppliers(),
     queryFn: listSuppliers,
   })
-  const discountReasonsQuery = useQuery({
-    queryKey: financeKeys.discountReasons(),
-    queryFn: listDiscountReasons,
-  })
+  const discountReason = useCatalog('finance.discount_reason')
+  const entryStatus = useCatalog('finance.entry_status')
+  const recurrence = useCatalog('finance.recurrence')
   const { activeCategories, labelOf } = useExpenseCategories()
 
   const listParams: ListEntriesParams = useMemo(() => {
@@ -1286,8 +1284,7 @@ export default function DespesasPage() {
   const categoryName = (value?: string | null) => labelOf(value)
   const supplierName = (id?: string | null) =>
     (suppliersListQuery.data ?? []).find((s) => s.id === id)?.name ?? null
-  const discountReasonName = (slug?: string | null) =>
-    (discountReasonsQuery.data ?? []).find((r) => r.slug === slug)?.name ?? slug ?? '—'
+  const discountReasonName = (slug?: string | null) => discountReason.labelOf(slug)
 
   // Cards vêm da API, nos dois eixos, pelo mês/ano/membro — NÃO somam a
   // página visível (paginada em {pageSize}) e ignoram status/categoria/busca,
@@ -1458,7 +1455,8 @@ export default function DespesasPage() {
                 emptyLabel="Todos"
                 value={filters.status}
                 onChange={(v) => setFilter('status', v)}
-                options={ENTRY_STATUS_OPTIONS}
+                options={entryStatus.options}
+                loading={entryStatus.isLoading}
               />
             </Grid>
             <Grid size={{ xs: 6, sm: 6, md: 3 }}>
@@ -1626,7 +1624,7 @@ export default function DespesasPage() {
                           size="small"
                           variant="outlined"
                           icon={<RepeatRoundedIcon />}
-                          label={RECURRENCE_LABEL[e.recurrence] ?? e.recurrence}
+                          label={recurrence.labelOf(e.recurrence)}
                         />
                       ) : (
                         '—'
@@ -1635,7 +1633,7 @@ export default function DespesasPage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={ENTRY_STATUS_LABEL[e.status] ?? e.status}
+                        label={entryStatus.labelOf(e.status)}
                         color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
                       />
                     </TableCell>

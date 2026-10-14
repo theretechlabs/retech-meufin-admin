@@ -1,4 +1,4 @@
-import type { WarrantyCategory, WarrantyDocType, WarrantyStatus } from './api'
+import type { WarrantyCategory, WarrantyStatus } from './api'
 
 export const warrantyKeys = {
   all: ['warranties'] as const,
@@ -7,25 +7,6 @@ export const warrantyKeys = {
   summary: () => [...warrantyKeys.all, 'summary'] as const,
   documents: (warrantyId: string) => [...warrantyKeys.all, 'documents', warrantyId] as const,
 }
-
-export const CATEGORY_OPTIONS: { value: WarrantyCategory; label: string }[] = [
-  { value: 'eletrodomestico', label: 'Eletrodoméstico' },
-  { value: 'eletronico', label: 'Eletrônico' },
-  { value: 'informatica', label: 'Informática' },
-  { value: 'celular', label: 'Celular' },
-  { value: 'movel', label: 'Móvel' },
-  { value: 'veiculo', label: 'Veículo' },
-  { value: 'imovel', label: 'Imóvel' },
-  { value: 'ferramenta', label: 'Ferramenta' },
-  { value: 'brinquedo', label: 'Brinquedo' },
-  { value: 'esporte', label: 'Esporte' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const CATEGORY_LABEL: Record<WarrantyCategory, string> = CATEGORY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<WarrantyCategory, string>,
-)
 
 export const CATEGORY_ICON: Record<WarrantyCategory, string> = {
   eletrodomestico: '🧊',
@@ -41,36 +22,11 @@ export const CATEGORY_ICON: Record<WarrantyCategory, string> = {
   outros: '📦',
 }
 
-export const STATUS_LABEL: Record<WarrantyStatus, string> = {
-  vigente: 'Vigente',
-  expira_em_breve: 'Expira em breve',
-  expirada: 'Expirada',
-}
-
 export const STATUS_COLOR: Record<WarrantyStatus, 'success' | 'warning' | 'error'> = {
   vigente: 'success',
   expira_em_breve: 'warning',
   expirada: 'error',
 }
-
-export const STATUS_OPTIONS: { value: WarrantyStatus; label: string }[] = [
-  { value: 'vigente', label: 'Vigente' },
-  { value: 'expira_em_breve', label: 'Expira em breve' },
-  { value: 'expirada', label: 'Expirada' },
-]
-
-export const DOC_TYPE_OPTIONS: { value: WarrantyDocType; label: string }[] = [
-  { value: 'nota_fiscal', label: 'Nota fiscal' },
-  { value: 'certificado', label: 'Certificado de garantia' },
-  { value: 'garantia_estendida', label: 'Garantia estendida' },
-  { value: 'manual', label: 'Manual' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const DOC_TYPE_LABEL: Record<WarrantyDocType, string> = DOC_TYPE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<WarrantyDocType, string>,
-)
 
 /** Converte centavos (BIGINT do backend) para string em BRL. */
 export function formatMoneyCents(cents?: number | null): string {

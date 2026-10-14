@@ -82,27 +82,17 @@ import {
 } from '../api'
 import {
   ALERT_STATUS_COLOR,
-  ALERT_STATUS_LABEL,
   ANALYTICS_PERIOD_OPTIONS,
   errorMessage,
   formatDate,
   formatKM,
   formatMoney,
-  FUEL_TYPE_LABEL,
   MAINTENANCE_STATUS_COLOR,
-  MAINTENANCE_STATUS_LABEL,
-  MAINTENANCE_STATUS_OPTIONS,
-  MAINTENANCE_TYPE_OPTIONS,
-  OS_ITEM_CATEGORY_LABEL,
-  OS_ITEM_CATEGORY_OPTIONS,
-  OS_ITEM_TYPE_OPTIONS,
-  PAYMENT_METHOD_OPTIONS,
   SCHEDULE_ALERT_STATUS_COLOR,
-  SCHEDULE_ALERT_STATUS_LABEL,
   vehicleKeys,
   VEHICLE_STATUS_COLOR,
-  VEHICLE_STATUS_LABEL,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { getSupplier, listSuppliers, listSuppliersPaged } from '@/features/finance/api'
 import { financeKeys } from '@/features/finance/constants'
 import { AssetSwapDialog } from '@/features/finance/components/AssetSwapDialog'
@@ -259,6 +249,11 @@ function MaintenanceFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(item)
+  const maintenanceStatus = useCatalog('vehicle.maintenance_status')
+  const maintenanceType = useCatalog('vehicle.maintenance_type')
+  const paymentMethod = useCatalog('vehicle.payment_method')
+  const osItemType = useCatalog('vehicle.os_item_type')
+  const osItemCategory = useCatalog('vehicle.os_item_category')
   const [itemRows, setItemRows] = useState<MaintenanceItemFormRow[]>(() =>
     item
       ? item.items.map((it) => ({
@@ -361,7 +356,8 @@ function MaintenanceFormDialog({
                     label="Status"
                     value={field.value}
                     onChange={field.onChange}
-                    options={MAINTENANCE_STATUS_OPTIONS}
+                    options={maintenanceStatus.options}
+                    loading={maintenanceStatus.isLoading}
                     disableClearable
                   />
                 )}
@@ -380,7 +376,8 @@ function MaintenanceFormDialog({
                     helperText={errors.type?.message}
                     value={field.value}
                     onChange={field.onChange}
-                    options={MAINTENANCE_TYPE_OPTIONS}
+                    options={maintenanceType.options}
+                    loading={maintenanceType.isLoading}
                     disableClearable
                   />
                 )}
@@ -463,7 +460,8 @@ function MaintenanceFormDialog({
                     emptyLabel="—"
                     value={field.value}
                     onChange={field.onChange}
-                    options={PAYMENT_METHOD_OPTIONS}
+                    options={paymentMethod.options}
+                    loading={paymentMethod.isLoading}
                   />
                 )}
               />
@@ -503,6 +501,7 @@ function MaintenanceFormDialog({
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                   <Box sx={{ flex: 1 }}>
                     <CatalogItemField
+                      categoryLabel={osItemCategory.labelOf}
                       defaultValue={row.description}
                       onSelect={(catItem) =>
                         setItemRows((p) =>
@@ -561,7 +560,8 @@ function MaintenanceFormDialog({
                           ),
                         )
                       }
-                      options={OS_ITEM_TYPE_OPTIONS}
+                      options={osItemType.options}
+                      loading={osItemType.isLoading}
                       disableClearable
                     />
                   </Grid>
@@ -575,7 +575,8 @@ function MaintenanceFormDialog({
                           p.map((r, i) => i === idx ? { ...r, category: v } : r)
                         )
                       }
-                      options={OS_ITEM_CATEGORY_OPTIONS}
+                      options={osItemCategory.options}
+                      loading={osItemCategory.isLoading}
                       disableClearable
                     />
                   </Grid>
@@ -690,6 +691,8 @@ function MaintenanceTab({ vehicleId, currentKM }: { vehicleId: string; currentKM
   void currentKM
   const qc = useQueryClient()
   const { show } = useToast()
+  const maintenanceStatus = useCatalog('vehicle.maintenance_status')
+  const osItemCategory = useCatalog('vehicle.os_item_category')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Maintenance | null>(null)
   const [expanded, setExpanded] = useState<string | null>(null)
@@ -759,7 +762,7 @@ function MaintenanceTab({ vehicleId, currentKM }: { vehicleId: string; currentKM
                     <Stack direction="row" alignItems="center" spacing={1} flexWrap="wrap" useFlexGap>
                       <Chip
                         size="small"
-                        label={MAINTENANCE_STATUS_LABEL[m.status]}
+                        label={maintenanceStatus.labelOf(m.status)}
                         color={MAINTENANCE_STATUS_COLOR[m.status]}
                         variant="outlined"
                       />
@@ -834,7 +837,7 @@ function MaintenanceTab({ vehicleId, currentKM }: { vehicleId: string; currentKM
                           {m.items.map((it: MaintenanceItem) => (
                             <TableRow key={it.id} hover>
                               <TableCell>
-                                <Chip size="small" label={OS_ITEM_CATEGORY_LABEL[it.category] ?? it.category} variant="outlined" />
+                                <Chip size="small" label={osItemCategory.labelOf(it.category)} variant="outlined" />
                               </TableCell>
                               <TableCell>
                                 <Typography variant="body2" fontWeight={500}>{it.description}</Typography>
@@ -1059,6 +1062,7 @@ function PlansTab({ vehicleId }: { vehicleId: string }) {
 // ─── Alerts tab ───────────────────────────────────────────────────────────────
 
 function AlertsTab({ vehicleId }: { vehicleId: string }) {
+  const alertStatus = useCatalog('vehicle.alert_status')
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: vehicleKeys.alerts(vehicleId),
     queryFn: () => getVehicleAlerts(vehicleId),
@@ -1108,7 +1112,7 @@ function AlertsTab({ vehicleId }: { vehicleId: string }) {
                   <TableCell>
                     <Chip
                       size="small"
-                      label={ALERT_STATUS_LABEL[a.status]}
+                      label={alertStatus.labelOf(a.status)}
                       color={ALERT_STATUS_COLOR[a.status]}
                     />
                   </TableCell>
@@ -1304,6 +1308,8 @@ function FipeHistoryTab({ vehicleId }: { vehicleId: string }) {
 function SchedulesTab({ vehicleId }: { vehicleId: string }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const scheduleAlertStatus = useCatalog('vehicle.schedule_alert_status')
+  const maintenanceStatus = useCatalog('vehicle.maintenance_status')
   const [formOpen, setFormOpen] = useState(false)
   const [toDelete, setToDelete] = useState<MaintenanceSchedule | null>(null)
   const [linkedMaintenanceId, setLinkedMaintenanceId] = useState('')
@@ -1405,7 +1411,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={SCHEDULE_ALERT_STATUS_LABEL[s.alert_status]}
+                        label={scheduleAlertStatus.labelOf(s.alert_status)}
                         color={SCHEDULE_ALERT_STATUS_COLOR[s.alert_status]}
                       />
                     </TableCell>
@@ -1465,7 +1471,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
               }}
               options={maintenances.map((m) => ({
                 value: m.id,
-                label: `${m.title}${m.service_date ? ` — ${formatDate(m.service_date)}` : ` (${MAINTENANCE_STATUS_LABEL[m.status]})`}`,
+                label: `${m.title}${m.service_date ? ` — ${formatDate(m.service_date)}` : ` (${maintenanceStatus.labelOf(m.status)})`}`,
               }))}
             />
             <TextField
@@ -1518,6 +1524,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
 
 function AnalyticsTab({ vehicleId }: { vehicleId: string }) {
   const theme = useTheme()
+  const osItemCategory = useCatalog('vehicle.os_item_category')
   const [months, setMonths] = useState(12)
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: vehicleKeys.analytics(vehicleId, months),
@@ -1601,7 +1608,7 @@ function AnalyticsTab({ vehicleId }: { vehicleId: string }) {
                 <Stack spacing={1}>
                   {data.spending_by_category.slice(0, 8).map((c) => (
                     <Stack key={c.category} direction="row" justifyContent="space-between">
-                      <Typography variant="body2">{OS_ITEM_CATEGORY_LABEL[c.category as never] ?? c.category}</Typography>
+                      <Typography variant="body2">{osItemCategory.labelOf(c.category)}</Typography>
                       <Typography variant="body2" fontWeight={600}>{formatMoney(c.total_cents / 100)}</Typography>
                     </Stack>
                   ))}
@@ -1638,6 +1645,8 @@ function AnalyticsTab({ vehicleId }: { vehicleId: string }) {
 export default function VehicleDetailPage() {
   const { vehicleId } = useParams<{ vehicleId: string }>()
   const navigate = useNavigate()
+  const vehicleStatus = useCatalog('vehicle.vehicle_status')
+  const fuelType = useCatalog('vehicle.fuel_type')
   const [tab, setTab] = useState(0)
   const [odometerOpen, setOdometerOpen] = useState(false)
   const [swapOpen, setSwapOpen] = useState(false)
@@ -1666,7 +1675,7 @@ export default function VehicleDetailPage() {
             </Typography>
             <Chip
               size="small"
-              label={VEHICLE_STATUS_LABEL[vehicle.status]}
+              label={vehicleStatus.labelOf(vehicle.status)}
               color={VEHICLE_STATUS_COLOR[vehicle.status]}
             />
           </Stack>
@@ -1685,7 +1694,7 @@ export default function VehicleDetailPage() {
               </Typography>
             )}
             <Typography variant="body2" color="text.secondary">
-              · {FUEL_TYPE_LABEL[vehicle.fuel_type] ?? vehicle.fuel_type}
+              · {fuelType.labelOf(vehicle.fuel_type)}
             </Typography>
           </Stack>
         </Box>

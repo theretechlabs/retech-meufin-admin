@@ -20,13 +20,8 @@ import {
   type WarrantyCategory,
   type WarrantyInput,
 } from '../api'
-import {
-  CATEGORY_OPTIONS,
-  centsToReais,
-  errorMessage,
-  reaisToCents,
-  warrantyKeys,
-} from '../constants'
+import { centsToReais, errorMessage, reaisToCents, warrantyKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ErrorState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
@@ -92,6 +87,7 @@ export function WarrantyFormDialog({
 }) {
   const qc = useQueryClient()
   const editing = Boolean(warranty)
+  const category = useCatalog('warranty.category')
 
   const {
     control,
@@ -169,7 +165,8 @@ export function WarrantyFormDialog({
                   label="Categoria"
                   value={field.value}
                   onChange={field.onChange}
-                  options={CATEGORY_OPTIONS}
+                  options={category.options}
+                  loading={category.isLoading}
                   disableClearable
                   sx={{ minWidth: 200 }}
                 />

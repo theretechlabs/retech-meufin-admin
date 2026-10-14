@@ -16,7 +16,8 @@ import {
 } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
 import { formatCents, getDashboardCategoryEntries, type Entry, type EntryStatus } from '../api'
-import { ENTRY_STATUS_LABEL, errorMessage, financeKeys, MONTH_OPTIONS } from '../constants'
+import { errorMessage, financeKeys, MONTH_OPTIONS } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
 const STATUS_COLOR: Record<EntryStatus, 'success' | 'warning' | 'default'> = {
@@ -55,6 +56,7 @@ export function CategoryEntriesDialog({
   familyMemberId?: string
   onClose: () => void
 }) {
+  const entryStatus = useCatalog('finance.entry_status')
   const params = useMemo(
     () => ({ year, month, family_member_id: familyMemberId || undefined }),
     [year, month, familyMemberId]
@@ -121,7 +123,7 @@ export function CategoryEntriesDialog({
                           size="small"
                           variant="outlined"
                           color={STATUS_COLOR[e.status]}
-                          label={ENTRY_STATUS_LABEL[e.status]}
+                          label={entryStatus.labelOf(e.status)}
                         />
                       </TableCell>
                       <TableCell align="right">

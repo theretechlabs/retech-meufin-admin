@@ -2,38 +2,6 @@ import type { EntryStatus, IncomeType, Recurrence, SourceKind } from './api'
 
 type Option<T extends string> = { value: T; label: string }
 
-/** Tipo (kind) da fonte de receita. */
-export const SOURCE_KIND_OPTIONS: Option<SourceKind>[] = [
-  { value: 'clt', label: 'CLT' },
-  { value: 'pj', label: 'PJ' },
-  { value: 'freelance', label: 'Projeto avulso' },
-  { value: 'rental', label: 'Aluguel' },
-  { value: 'investment', label: 'Investimento' },
-  { value: 'benefit', label: 'Benefício' },
-  { value: 'other', label: 'Outro' },
-]
-
-export const SOURCE_KIND_LABEL: Record<SourceKind, string> = SOURCE_KIND_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<SourceKind, string>
-)
-
-/** Tipo da receita (natureza do lançamento). */
-export const INCOME_TYPE_OPTIONS: Option<IncomeType>[] = [
-  { value: 'salario', label: 'Salário (CLT)' },
-  { value: 'pj_contrato', label: 'Remuneração PJ (contrato)' },
-  { value: 'pro_labore', label: 'Pró-labore' },
-  { value: 'dividendos', label: 'Dividendos' },
-  { value: 'rendimento', label: 'Rendimentos (juros/investimentos)' },
-  { value: 'aluguel', label: 'Aluguel' },
-  { value: 'freela', label: 'Freela' },
-  { value: 'ferias_13', label: '13º/Férias' },
-  { value: 'beneficio', label: 'Benefício' },
-  { value: 'reembolso', label: 'Reembolso' },
-  { value: 'venda_bem', label: 'Venda de bem (veículo, imóvel)' },
-  { value: 'outro', label: 'Outro' },
-]
-
 /**
  * Semântica de cada tipo de receita — é isto que deixa o sistema "raciocinar"
  * sobre a renda no futuro (composição ativa×passiva, sazonalidade na projeção,
@@ -75,99 +43,6 @@ export const SOURCE_KIND_TO_INCOME_TYPE: Partial<Record<SourceKind, IncomeType>>
   benefit: 'beneficio',
 }
 
-export const INCOME_TYPE_LABEL: Record<IncomeType, string> = INCOME_TYPE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<IncomeType, string>
-)
-
-/** Categoria da despesa (armazenada no campo `type` do lançamento). */
-export const EXPENSE_CATEGORY_OPTIONS: Option<string>[] = [
-  { value: 'moradia', label: 'Moradia' },
-  { value: 'alimentacao', label: 'Alimentação' },
-  { value: 'mercado', label: 'Mercado' },
-  { value: 'saude', label: 'Saúde' },
-  { value: 'transporte', label: 'Transporte' },
-  { value: 'educacao', label: 'Educação' },
-  { value: 'lazer', label: 'Lazer' },
-  { value: 'contas_fixas', label: 'Contas fixas' },
-  { value: 'servicos', label: 'Serviços' },
-  { value: 'impostos', label: 'Impostos' },
-  { value: 'equipamentos', label: 'Equipamentos' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const EXPENSE_CATEGORY_LABEL: Record<string, string> = EXPENSE_CATEGORY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
-
-/** Bancos/instituições emissoras de cartão (campo `bank`). A bandeira
- * (Visa, Mastercard...) vem do catálogo global GET /finance/card-brands. */
-export const CARD_BANK_OPTIONS: Option<string>[] = [
-  { value: 'nubank', label: 'Nubank' },
-  { value: 'inter', label: 'Inter' },
-  { value: 'santander', label: 'Santander' },
-  { value: 'itau', label: 'Itaú' },
-  { value: 'bradesco', label: 'Bradesco' },
-  { value: 'banco_do_brasil', label: 'Banco do Brasil' },
-  { value: 'caixa', label: 'Caixa' },
-  { value: 'c6', label: 'C6' },
-  { value: 'btg', label: 'BTG Pactual' },
-  { value: 'xp', label: 'XP' },
-  { value: 'mercado_pago', label: 'Mercado Pago' },
-  { value: 'picpay', label: 'PicPay' },
-  { value: 'neon', label: 'Neon' },
-  { value: 'pan', label: 'Banco Pan' },
-  { value: 'original', label: 'Original' },
-  { value: 'safra', label: 'Safra' },
-  { value: 'sicoob', label: 'Sicoob' },
-  { value: 'sicredi', label: 'Sicredi' },
-  { value: 'banrisul', label: 'Banrisul' },
-  { value: 'bmg', label: 'BMG' },
-  { value: 'bv', label: 'BV (Votorantim)' },
-  { value: 'daycoval', label: 'Daycoval' },
-  { value: 'pagbank', label: 'PagBank (PagSeguro)' },
-  { value: 'will_bank', label: 'Will Bank' },
-  { value: 'agibank', label: 'Agibank' },
-  { value: 'digio', label: 'Digio' },
-  { value: 'porto_bank', label: 'Porto Bank (Porto Seguro)' },
-  { value: 'credicard', label: 'Credicard (Itaú)' },
-  // Emissoras de cartão de varejo (private label / co-branded)
-  { value: 'csf', label: 'Banco CSF (Carrefour/Atacadão)' },
-  { value: 'bradescard', label: 'Bradescard (C&A e outros)' },
-  { value: 'cetelem', label: 'Cetelem (BNP Paribas)' },
-  { value: 'midway', label: 'Midway (Riachuelo)' },
-  { value: 'realize', label: 'Realize (Renner)' },
-  { value: 'pefisa', label: 'Pefisa (Pernambucanas)' },
-  { value: 'luizacred', label: 'Luizacred (Magalu)' },
-  { value: 'outro', label: 'Outro' },
-]
-
-export const CARD_BANK_LABEL: Record<string, string> = CARD_BANK_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
-
-/** Recorrência do lançamento. */
-export const RECURRENCE_OPTIONS: Option<Recurrence>[] = [
-  { value: 'none', label: 'Nenhuma' },
-  { value: 'weekly', label: 'Semanal' },
-  { value: 'monthly', label: 'Mensal' },
-  { value: 'yearly', label: 'Anual' },
-]
-
-export const RECURRENCE_LABEL: Record<Recurrence, string> = RECURRENCE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<Recurrence, string>
-)
-
-/** Situação do lançamento. */
-export const ENTRY_STATUS_OPTIONS: Option<EntryStatus>[] = [
-  { value: 'prevista', label: 'Prevista' },
-  { value: 'realizada', label: 'Realizada' },
-  { value: 'cancelada', label: 'Cancelada' },
-]
-
 /** Status que um lançamento importado (fatura, cupom) pode nascer. */
 export const SETTLEABLE_STATUS_OPTIONS: Option<EntryStatus>[] = [
   { value: 'realizada', label: 'Realizada (já paga)' },
@@ -186,12 +61,6 @@ export const INSTALLMENT_SOURCE_OPTIONS: Option<'invoice' | 'expense'>[] = [
   { value: 'expense', label: 'Despesa parcelada' },
 ]
 
-/** Tipo de conta bancária do fornecedor. */
-export const BANK_ACCOUNT_TYPE_OPTIONS: Option<'corrente' | 'poupanca'>[] = [
-  { value: 'corrente', label: 'Corrente' },
-  { value: 'poupanca', label: 'Poupança' },
-]
-
 /** Filtro Ativas/Arquivadas (contas, fontes, categorias) e Ativos/Arquivados (cartões). */
 export const ARCHIVED_FILTER_OPTIONS_F: Option<'true' | 'false'>[] = [
   { value: 'true', label: 'Ativas' },
@@ -201,11 +70,6 @@ export const ARCHIVED_FILTER_OPTIONS_M: Option<'true' | 'false'>[] = [
   { value: 'true', label: 'Ativos' },
   { value: 'false', label: 'Arquivados' },
 ]
-
-export const ENTRY_STATUS_LABEL: Record<EntryStatus, string> = ENTRY_STATUS_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<EntryStatus, string>
-)
 
 /** Cor do chip por status (MUI color). */
 export const ENTRY_STATUS_COLOR: Record<EntryStatus, 'default' | 'warning' | 'success' | 'error'> =
@@ -252,7 +116,6 @@ export const financeKeys = {
   suppliers: () => [...financeKeys.all, 'suppliers'] as const,
   receipts: (entryId: string) => [...financeKeys.all, 'receipts', entryId] as const,
   attachments: (entryId: string) => [...financeKeys.all, 'attachments', entryId] as const,
-  discountReasons: () => [...financeKeys.all, 'discount-reasons'] as const,
   lateCharges: (entryId: string, paidAt: string) =>
     [...financeKeys.all, 'late-charges', entryId, paidAt] as const,
   cancelReasons: () => [...financeKeys.all, 'cancel-reasons'] as const,
@@ -262,7 +125,6 @@ export const financeKeys = {
     [...financeKeys.all, 'renegotiation-preview', groupId] as const,
   assetDebts: (assetType: string, assetId: string) =>
     [...financeKeys.all, 'asset-debts', assetType, assetId] as const,
-  cardBrands: () => [...financeKeys.all, 'card-brands'] as const,
   dashboard: (params: Record<string, unknown>) => [...financeKeys.all, 'dashboard', params] as const,
   dashboardCashflow: (params: Record<string, unknown>) =>
     [...financeKeys.all, 'dashboard-cashflow', params] as const,
@@ -289,38 +151,6 @@ export function errorMessage(err: unknown, fallback = 'Ocorreu um erro. Tente no
   return fallback
 }
 
-/** Tipo da conta (finance_accounts). */
-export const ACCOUNT_KIND_OPTIONS: Option<import('./api').AccountKind>[] = [
-  { value: 'corrente', label: 'Conta corrente' },
-  { value: 'poupanca', label: 'Poupança' },
-  { value: 'carteira', label: 'Carteira / Dinheiro' },
-  { value: 'digital', label: 'Conta digital' },
-]
-
-export const ACCOUNT_KIND_LABEL: Record<string, string> = ACCOUNT_KIND_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
-
-/** Forma de pagamento na liquidação. */
-export const PAYMENT_METHOD_OPTIONS: Option<import('./api').PaymentMethod>[] = [
-  { value: 'pix', label: 'Pix' },
-  { value: 'debito', label: 'Débito' },
-  { value: 'transferencia', label: 'Transferência' },
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'dinheiro', label: 'Dinheiro' },
-  { value: 'cartao_credito', label: 'Cartão de crédito' },
-]
-
-export const ATTACHMENT_TYPE_OPTIONS: Option<import('./api').EntryAttachmentType>[] = [
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'pix_qrcode', label: 'QR Code Pix' },
-  { value: 'nota_fiscal', label: 'Nota fiscal' },
-  { value: 'contrato', label: 'Contrato' },
-  { value: 'fatura', label: 'Fatura' },
-  { value: 'outro', label: 'Outro' },
-]
-
 /**
  * Tipos que fazem sentido em várias parcelas da mesma série (QR Pix da mesma
  * chave, contrato da série). Boleto, nota e fatura são de uma ocorrência só.
@@ -334,77 +164,11 @@ export function isAttachmentReplicable(t: import('./api').EntryAttachmentType): 
   return ATTACHMENT_REPLICABLE.has(t)
 }
 
-export const ATTACHMENT_TYPE_LABEL: Record<string, string> = ATTACHMENT_TYPE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
-
-export const PAYMENT_METHOD_LABEL: Record<string, string> = {
-  ...PAYMENT_METHOD_OPTIONS.reduce(
-    (acc, o) => ({ ...acc, [o.value]: o.label }),
-    {} as Record<string, string>
-  ),
-  // Só o sistema grava (quitação/venda numa troca); não entra no select.
-  compensacao: 'Compensação (sem caixa)',
-}
-
-/** Desfecho de um evento de dívida. */
-export const RENEGOTIATION_KIND_LABEL: Record<import('./api').RenegotiationKind, string> = {
-  renegociacao: 'Renegociação',
-  quitacao: 'Quitação antecipada',
-  troca_bem: 'Troca de bem',
-}
-
 /** Formas que apontam para uma conta (as demais: dinheiro=nada, cartao_credito=cartão). */
 export const ACCOUNT_PAYMENT_METHODS = ['pix', 'debito', 'transferencia', 'boleto'] as const
 
-/** Categoria do fornecedor. */
-export const SUPPLIER_CATEGORY_OPTIONS: Option<import('./api').SupplierCategory>[] = [
-  { value: 'servicos_publicos', label: 'Serviços Públicos' },
-  { value: 'telecom', label: 'Telecom' },
-  { value: 'streaming', label: 'Streaming' },
-  { value: 'varejo', label: 'Varejo / E-commerce' },
-  { value: 'farmacia', label: 'Farmácia' },
-  { value: 'saude', label: 'Saúde' },
-  { value: 'seguros', label: 'Seguros' },
-  { value: 'financeiro', label: 'Financeiro' },
-  { value: 'educacao', label: 'Educação' },
-  { value: 'alimentacao', label: 'Alimentação / Delivery' },
-  { value: 'transporte', label: 'Transporte' },
-  { value: 'academia', label: 'Academia / Bem-estar' },
-  { value: 'moradia', label: 'Moradia / Imóvel' },
-  { value: 'tecnologia', label: 'Tecnologia / SaaS / TI' },
-  { value: 'pet', label: 'Pet / Veterinário' },
-  { value: 'juridico', label: 'Jurídico / Cartório' },
-  { value: 'contabil', label: 'Contabilidade / Fiscal' },
-  { value: 'condominio', label: 'Condomínio / IPTU' },
-  { value: 'vestuario', label: 'Vestuário / Calçados' },
-  { value: 'beleza', label: 'Beleza / Estética' },
-  { value: 'viagem', label: 'Viagem / Hospedagem' },
-  { value: 'entretenimento', label: 'Entretenimento / Eventos' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const SUPPLIER_CATEGORY_LABEL: Record<string, string> = SUPPLIER_CATEGORY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
-
-/** Tipo de cobrança padrão do fornecedor. */
-export const SUPPLIER_BILLING_OPTIONS: Option<import('./api').SupplierBillingType>[] = [
-  { value: 'boleto', label: 'Boleto' },
-  { value: 'pix', label: 'Pix' },
-  { value: 'cartao_credito', label: 'Cartão de crédito' },
-  { value: 'debito_automatico', label: 'Débito automático' },
-  { value: 'debito', label: 'Débito' },
-  { value: 'transferencia', label: 'Transferência' },
-  { value: 'desconto_folha', label: 'Desconto em folha' },
-]
-
-export const SUPPLIER_BILLING_LABEL: Record<string, string> = SUPPLIER_BILLING_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<string, string>
-)
+/** Formas que só o sistema grava (quitação/venda numa troca de bem); fora do select manual. */
+export const SYSTEM_ONLY_PAYMENT_METHODS: ReadonlySet<string> = new Set(['compensacao'])
 
 /**
  * Toast da edição em série: dia do vencimento alcança os lançamentos DESTA

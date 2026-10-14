@@ -54,13 +54,12 @@ import {
 } from '../api'
 import {
   ENTRY_STATUS_COLOR,
-  ENTRY_STATUS_LABEL,
   errorMessage,
-  EXPENSE_CATEGORY_LABEL,
   INVOICE_RECURRENCE_OPTIONS,
   financeKeys,
   MONTH_OPTIONS,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { useYearOptions } from '../hooks/useYearOptions'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { MoneyField } from '@/components/fields/MoneyField'
@@ -441,6 +440,8 @@ function PurchasesRow({
 }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const entryStatus = useCatalog('finance.entry_status')
+  const { labelOf: expenseCategoryLabel } = useExpenseCategories()
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [toDeletePurchase, setToDeletePurchase] = useState<Entry | null>(null)
   const [toEditPurchase, setToEditPurchase] = useState<Entry | null>(null)
@@ -495,7 +496,7 @@ function PurchasesRow({
         <TableCell>
           <Chip
             size="small"
-            label={ENTRY_STATUS_LABEL[invoice.status] ?? invoice.status}
+            label={entryStatus.labelOf(invoice.status)}
             color={ENTRY_STATUS_COLOR[invoice.status] ?? 'default'}
           />
         </TableCell>
@@ -582,7 +583,7 @@ function PurchasesRow({
                         <TableCell>{p.purchase_date ? formatDateBR(p.purchase_date) : '—'}</TableCell>
                         <TableCell>{p.description}</TableCell>
                         <TableCell>
-                          {p.type ? EXPENSE_CATEGORY_LABEL[p.type] ?? p.type : '—'}
+                          {expenseCategoryLabel(p.type)}
                         </TableCell>
                         <TableCell align="right">{formatCents(p.amount_cents)}</TableCell>
                         <TableCell align="right">

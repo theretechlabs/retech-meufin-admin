@@ -36,7 +36,8 @@ import {
   type FinanceAccount,
   type FinanceAccountInput,
 } from '../api'
-import { ACCOUNT_KIND_LABEL, ACCOUNT_KIND_OPTIONS, errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
+import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -66,6 +67,7 @@ function AccountFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(account)
+  const accountKind = useCatalog('finance.account_kind')
 
   const {
     control,
@@ -136,7 +138,8 @@ function AccountFormDialog({
                 required
                 value={field.value}
                 onChange={field.onChange}
-                options={ACCOUNT_KIND_OPTIONS}
+                options={accountKind.options}
+                loading={accountKind.isLoading}
                 disableClearable
               />
             )}
@@ -194,6 +197,7 @@ function AccountFormDialog({
 export default function ContasPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const accountKind = useCatalog('finance.account_kind')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<FinanceAccount | null>(null)
   const [toDelete, setToDelete] = useState<FinanceAccount | null>(null)
@@ -282,7 +286,8 @@ export default function ContasPage() {
               setKind(v)
               setPage(0)
             }}
-            options={ACCOUNT_KIND_OPTIONS}
+            options={accountKind.options}
+            loading={accountKind.isLoading}
           />
           <AutocompleteField
             label="Status"
@@ -336,7 +341,7 @@ export default function ContasPage() {
                 {accounts.map((a) => (
                   <TableRow key={a.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{a.name}</TableCell>
-                    <TableCell>{ACCOUNT_KIND_LABEL[a.kind] ?? a.kind}</TableCell>
+                    <TableCell>{accountKind.labelOf(a.kind)}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>{a.bank_name || '—'}</TableCell>
                     <TableCell>
                       <Chip

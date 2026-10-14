@@ -33,12 +33,8 @@ import {
   type MemberDocType,
   type MemberDocument,
 } from '../api'
-import {
-  errorMessage,
-  healthKeys,
-  MEMBER_DOC_TYPE_LABEL,
-  MEMBER_DOC_TYPE_OPTIONS,
-} from '../constants'
+import { errorMessage, healthKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from './StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
@@ -82,6 +78,7 @@ export function MemberDocumentsDialog({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const memberDocType = useCatalog('health.member_doc_type')
   const [file, setFile] = useState<File | null>(null)
   const [toDelete, setToDelete] = useState<MemberDocument | null>(null)
 
@@ -151,7 +148,8 @@ export function MemberDocumentsDialog({
                     label="Tipo de documento"
                     value={field.value}
                     onChange={field.onChange}
-                    options={MEMBER_DOC_TYPE_OPTIONS}
+                    options={memberDocType.options}
+                    loading={memberDocType.isLoading}
                     required
                     disableClearable
                   />
@@ -252,7 +250,7 @@ export function MemberDocumentsDialog({
                       <TableCell sx={{ fontWeight: 600 }}>
                         {doc.doc_type === 'outro' && doc.label
                           ? doc.label
-                          : (MEMBER_DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type)}
+                          : memberDocType.labelOf(doc.doc_type)}
                       </TableCell>
                       <TableCell>{doc.doc_number || '—'}</TableCell>
                       <TableCell>

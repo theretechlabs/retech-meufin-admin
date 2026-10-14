@@ -40,18 +40,8 @@ import {
   type AssetTaxInput,
 } from '../api'
 import { listVehiclesPaged } from '@/features/vehicles/api'
-import {
-  ASSET_TYPE_OPTIONS,
-  errorMessage,
-  formatCents,
-  formatDate,
-  patrimonyKeys,
-  TAX_STATUS_COLOR,
-  TAX_STATUS_LABEL,
-  TAX_STATUS_OPTIONS,
-  TAX_TYPE_LABEL,
-  TAX_TYPE_OPTIONS,
-} from '../constants'
+import { errorMessage, formatCents, formatDate, patrimonyKeys, TAX_STATUS_COLOR } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -121,6 +111,8 @@ function TaxFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(tax)
+  const assetTypeCatalog = useCatalog('patrimony.asset_type')
+  const taxType = useCatalog('patrimony.tax_type')
 
   const {
     control,
@@ -184,7 +176,8 @@ function TaxFormDialog({
                   label="Bem"
                   value={field.value}
                   onChange={field.onChange}
-                  options={ASSET_TYPE_OPTIONS}
+                  options={assetTypeCatalog.options}
+                  loading={assetTypeCatalog.isLoading}
                   disableClearable
                 />
               )}
@@ -199,7 +192,8 @@ function TaxFormDialog({
                   required
                   value={field.value}
                   onChange={field.onChange}
-                  options={TAX_TYPE_OPTIONS}
+                  options={taxType.options}
+                  loading={taxType.isLoading}
                   disableClearable
                 />
               )}
@@ -331,6 +325,8 @@ function TaxFormDialog({
 export default function AssetTaxesPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const taxType = useCatalog('patrimony.tax_type')
+  const taxStatus = useCatalog('patrimony.tax_status')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<AssetTax | null>(null)
@@ -418,7 +414,8 @@ export default function AssetTaxesPage() {
             emptyLabel="Todos"
             value={typeFilter}
             onChange={setTypeFilter}
-            options={TAX_TYPE_OPTIONS}
+            options={taxType.options}
+            loading={taxType.isLoading}
           />
           <AutocompleteField
             label="Status"
@@ -428,7 +425,8 @@ export default function AssetTaxesPage() {
             emptyLabel="Todos"
             value={statusFilter}
             onChange={setStatusFilter}
-            options={TAX_STATUS_OPTIONS}
+            options={taxStatus.options}
+            loading={taxStatus.isLoading}
           />
         </Stack>
       </Card>
@@ -468,7 +466,7 @@ export default function AssetTaxesPage() {
                   <TableRow key={t.id} hover>
                     <TableCell>
                       <Typography variant="body2" fontWeight={600}>
-                        {TAX_TYPE_LABEL[t.tax_type]}
+                        {taxType.labelOf(t.tax_type)}
                       </Typography>
                       {t.description && (
                         <Typography variant="caption" color="text.secondary">
@@ -487,7 +485,7 @@ export default function AssetTaxesPage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={TAX_STATUS_LABEL[t.status]}
+                        label={taxStatus.labelOf(t.status)}
                         color={TAX_STATUS_COLOR[t.status]}
                         variant="filled"
                       />
@@ -524,7 +522,7 @@ export default function AssetTaxesPage() {
       <ConfirmDialog
         open={Boolean(toDelete)}
         title="Excluir imposto"
-        description={`Excluir o ${toDelete ? TAX_TYPE_LABEL[toDelete.tax_type] : ''} de ${toDelete?.reference_year}? Esta ação não pode ser desfeita.`}
+        description={`Excluir o ${toDelete ? taxType.labelOf(toDelete.tax_type) : ''} de ${toDelete?.reference_year}? Esta ação não pode ser desfeita.`}
         loading={deleteMutation.isPending}
         onConfirm={() => toDelete && deleteMutation.mutate(toDelete.id)}
         onClose={() => setToDelete(null)}
@@ -533,7 +531,7 @@ export default function AssetTaxesPage() {
       <ConfirmDialog
         open={Boolean(toPay)}
         title="Marcar como pago"
-        description={`Registrar o pagamento integral (${toPay ? formatCents(toPay.amount_cents) : ''}) do ${toPay ? TAX_TYPE_LABEL[toPay.tax_type] : ''} de ${toPay?.reference_year}?`}
+        description={`Registrar o pagamento integral (${toPay ? formatCents(toPay.amount_cents) : ''}) do ${toPay ? taxType.labelOf(toPay.tax_type) : ''} de ${toPay?.reference_year}?`}
         loading={payMutation.isPending}
         onConfirm={() => toPay && payMutation.mutate(toPay)}
         onClose={() => setToPay(null)}

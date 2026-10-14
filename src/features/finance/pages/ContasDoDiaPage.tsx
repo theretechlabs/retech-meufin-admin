@@ -30,7 +30,8 @@ import TaskAltRoundedIcon from '@mui/icons-material/TaskAltRounded'
 import RequestQuoteRoundedIcon from '@mui/icons-material/RequestQuoteRounded'
 import { useQuery } from '@tanstack/react-query'
 import { formatCents, listEntries, type Entry, type EntryKind } from '../api'
-import { errorMessage, financeKeys, INCOME_TYPE_LABEL } from '../constants'
+import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { SettleEntryDialog } from '../components/SettleEntryDialog'
 import { EntryAttachmentsSection } from '../components/EntryAttachments'
@@ -46,9 +47,13 @@ function formatDueDate(due: string): string {
   return `${d}/${m}/${y}`
 }
 
-function categoryLabel(e: Entry, expenseLabelOf: (slug?: string | null) => string): string {
+function categoryLabel(
+  e: Entry,
+  expenseLabelOf: (slug?: string | null) => string,
+  incomeTypeLabelOf: (slug?: string | null) => string,
+): string {
   if (!e.type) return '—'
-  return e.kind === 'debit' ? expenseLabelOf(e.type) : (INCOME_TYPE_LABEL[e.type] ?? e.type)
+  return e.kind === 'debit' ? expenseLabelOf(e.type) : incomeTypeLabelOf(e.type)
 }
 
 function EntriesTable({
@@ -64,6 +69,7 @@ function EntriesTable({
   onDocuments: (e: Entry) => void
   labelOf: (slug?: string | null) => string
 }) {
+  const incomeType = useCatalog('finance.income_type')
   return (
     <TableContainer>
       <Table size="small">
@@ -91,7 +97,9 @@ function EntriesTable({
                   />
                 )}
               </TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>{categoryLabel(e, labelOf)}</TableCell>
+              <TableCell sx={{ color: 'text.secondary' }}>
+                {categoryLabel(e, labelOf, incomeType.labelOf)}
+              </TableCell>
               <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
                 {formatCents(e.amount_cents)}
               </TableCell>

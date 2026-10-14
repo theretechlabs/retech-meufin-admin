@@ -41,9 +41,8 @@ import {
   formatDate,
   patrimonyKeys,
   TAX_STATUS_COLOR,
-  TAX_STATUS_LABEL,
-  TAX_TYPE_LABEL,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
@@ -100,6 +99,8 @@ const SERIES_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#d32f2f', '#
 export default function PatrimonyDashboardPage() {
   const navigate = useNavigate()
   const theme = useTheme()
+  const taxType = useCatalog('patrimony.tax_type')
+  const taxStatus = useCatalog('patrimony.tax_status')
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: patrimonyKeys.overview(),
@@ -124,7 +125,7 @@ export default function PatrimonyDashboardPage() {
     const types = new Set<string>()
     for (const inf of data?.inflation ?? []) {
       if (inf.variation_pct == null) continue
-      const label = TAX_TYPE_LABEL[inf.tax_type] ?? inf.tax_type
+      const label = taxType.labelOf(inf.tax_type)
       types.add(label)
       const row = rows.get(inf.year) ?? { year: String(inf.year) }
       row[label] = Number(inf.variation_pct.toFixed(1))
@@ -136,7 +137,7 @@ export default function PatrimonyDashboardPage() {
         .map(([, row]) => row),
       inflationTypes: Array.from(types),
     }
-  }, [data])
+  }, [data, taxType])
 
   const thisYearTotals = useMemo(
     () => (data?.by_year ?? []).find((y) => y.year === currentYear),
@@ -331,7 +332,7 @@ export default function PatrimonyDashboardPage() {
                     <TableBody>
                       {[...overview.overdue, ...overview.upcoming].map((t) => (
                         <TableRow key={t.id} hover>
-                          <TableCell sx={{ fontWeight: 600 }}>{TAX_TYPE_LABEL[t.tax_type]}</TableCell>
+                          <TableCell sx={{ fontWeight: 600 }}>{taxType.labelOf(t.tax_type)}</TableCell>
                           <TableCell sx={{ color: 'text.secondary' }}>{t.reference_year}</TableCell>
                           <TableCell sx={{ color: 'text.secondary' }}>{formatDate(t.due_date)}</TableCell>
                           <TableCell align="right" sx={{ fontWeight: 600 }}>
@@ -340,7 +341,7 @@ export default function PatrimonyDashboardPage() {
                           <TableCell>
                             <Chip
                               size="small"
-                              label={TAX_STATUS_LABEL[t.status]}
+                              label={taxStatus.labelOf(t.status)}
                               color={TAX_STATUS_COLOR[t.status]}
                               variant="filled"
                             />

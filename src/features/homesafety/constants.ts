@@ -1,11 +1,4 @@
-import { optionsFromLabels } from '@/components/fields/options'
-import type {
-  HomeSafetyCategory,
-  HomeSafetyEventType,
-  HomeSafetyPriority,
-  HomeSafetyRiskType,
-  HomeSafetyStatus,
-} from './api'
+import type { HomeSafetyCategory, HomeSafetyPriority, HomeSafetyStatus } from './api'
 
 export const homeSafetyKeys = {
   all: ['home-safety'] as const,
@@ -17,27 +10,8 @@ export const homeSafetyKeys = {
 }
 
 // ─── Categoria ────────────────────────────────────────────────────────────────
+// Rótulos vêm do catálogo `homesafety.category`; aqui só as cores dos gráficos.
 
-export const CATEGORY_OPTIONS: { value: HomeSafetyCategory; label: string }[] = [
-  { value: 'gas', label: 'Gás' },
-  { value: 'agua', label: 'Água' },
-  { value: 'incendio', label: 'Incêndio' },
-  { value: 'eletrica', label: 'Elétrica' },
-  { value: 'climatizacao', label: 'Climatização' },
-  { value: 'pragas', label: 'Pragas' },
-  { value: 'estrutura', label: 'Estrutura' },
-  { value: 'seguranca_eletronica', label: 'Segurança eletrônica' },
-  { value: 'piscina', label: 'Piscina' },
-  { value: 'saude', label: 'Saúde' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const CATEGORY_LABEL: Record<HomeSafetyCategory, string> = CATEGORY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<HomeSafetyCategory, string>,
-)
-
-// Cores por categoria (usadas nos gráficos).
 export const CATEGORY_COLOR: Record<HomeSafetyCategory, string> = {
   gas: '#e65100',
   agua: '#0277bd',
@@ -52,34 +26,7 @@ export const CATEGORY_COLOR: Record<HomeSafetyCategory, string> = {
   outros: '#616161',
 }
 
-// ─── Risco ────────────────────────────────────────────────────────────────────
-
-export const RISK_TYPE_OPTIONS: { value: HomeSafetyRiskType; label: string }[] = [
-  { value: 'fisico', label: 'Físico' },
-  { value: 'quimico', label: 'Químico' },
-  { value: 'biologico', label: 'Biológico' },
-  { value: 'eletrico', label: 'Elétrico' },
-  { value: 'incendio', label: 'Incêndio' },
-  { value: 'outros', label: 'Outros' },
-]
-
-export const RISK_TYPE_LABEL: Record<HomeSafetyRiskType, string> = RISK_TYPE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<HomeSafetyRiskType, string>,
-)
-
 // ─── Prioridade ───────────────────────────────────────────────────────────────
-
-export const PRIORITY_OPTIONS: { value: HomeSafetyPriority; label: string }[] = [
-  { value: 'alta', label: 'Alta' },
-  { value: 'media', label: 'Média' },
-  { value: 'baixa', label: 'Baixa' },
-]
-
-export const PRIORITY_LABEL: Record<HomeSafetyPriority, string> = PRIORITY_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<HomeSafetyPriority, string>,
-)
 
 export const PRIORITY_COLOR: Record<HomeSafetyPriority, 'error' | 'warning' | 'default'> = {
   alta: 'error',
@@ -88,17 +35,6 @@ export const PRIORITY_COLOR: Record<HomeSafetyPriority, 'error' | 'warning' | 'd
 }
 
 // ─── Status ───────────────────────────────────────────────────────────────────
-
-export const STATUS_LABEL: Record<HomeSafetyStatus, string> = {
-  vencido: 'Vencido',
-  atencao: 'Atenção',
-  proximo: 'Próximo',
-  ok: 'Em dia',
-  sem_controle: 'Sem controle',
-}
-
-/** Opções do filtro de status da listagem (status é calculado pela API, não editável). */
-export const STATUS_FILTER_OPTIONS = optionsFromLabels(STATUS_LABEL)
 
 export const STATUS_COLOR: Record<HomeSafetyStatus, 'error' | 'warning' | 'info' | 'success' | 'default'> = {
   vencido: 'error',
@@ -116,22 +52,6 @@ export const STATUS_HEX: Record<HomeSafetyStatus, string> = {
   ok: '#2e7d32',
   sem_controle: '#9e9e9e',
 }
-
-// ─── Evento ───────────────────────────────────────────────────────────────────
-
-export const EVENT_TYPE_OPTIONS: { value: HomeSafetyEventType; label: string }[] = [
-  { value: 'manutencao', label: 'Manutenção' },
-  { value: 'troca', label: 'Troca' },
-  { value: 'instalacao', label: 'Instalação' },
-  { value: 'inspecao', label: 'Inspeção' },
-  { value: 'recarga', label: 'Recarga' },
-  { value: 'limpeza', label: 'Limpeza' },
-]
-
-export const EVENT_TYPE_LABEL: Record<HomeSafetyEventType, string> = EVENT_TYPE_OPTIONS.reduce(
-  (acc, o) => ({ ...acc, [o.value]: o.label }),
-  {} as Record<HomeSafetyEventType, string>,
-)
 
 // ─── Formatadores ─────────────────────────────────────────────────────────────
 
