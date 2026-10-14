@@ -31,13 +31,13 @@ import { Controller, useForm } from 'react-hook-form'
 import {
   createCard,
   deleteCard,
-  listCardBrands,
   listCardsPaged,
   updateCard,
   type CreditCard,
   type CreditCardInput,
 } from '../api'
-import { CARD_BANK_LABEL, CARD_BANK_OPTIONS, errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_M } from '../constants'
+import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_M } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -83,11 +83,8 @@ function CardFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(card)
-
-  const brandsQuery = useQuery({
-    queryKey: financeKeys.cardBrands(),
-    queryFn: listCardBrands,
-  })
+  const cardBank = useCatalog('finance.card_bank')
+  const cardBrand = useCatalog('finance.card_brand')
 
   const {
     control,
@@ -168,10 +165,8 @@ function CardFormDialog({
                   label="Banco"
                   value={field.value}
                   onChange={field.onChange}
-                  options={CARD_BANK_OPTIONS.map((o) => ({
-                    value: o.value,
-                    label: o.label,
-                  }))}
+                  options={cardBank.options}
+                  loading={cardBank.isLoading}
                   placeholder="Busque pelo nome (ex.: Carrefour)"
                 />
               )}
@@ -185,7 +180,8 @@ function CardFormDialog({
                   emptyLabel="Não informada"
                   value={field.value}
                   onChange={field.onChange}
-                  options={(brandsQuery.data ?? []).map((b) => ({ value: b.slug, label: b.name }))}
+                  options={cardBrand.options}
+                  loading={cardBrand.isLoading}
                 />
               )}
             />
@@ -264,12 +260,8 @@ export default function CartoesPage() {
   const qc = useQueryClient()
   const { show } = useToast()
 
-  const brandsQuery = useQuery({
-    queryKey: financeKeys.cardBrands(),
-    queryFn: listCardBrands,
-  })
-  const brandName = (slug: string) =>
-    (brandsQuery.data ?? []).find((b) => b.slug === slug)?.name ?? slug
+  const cardBank = useCatalog('finance.card_bank')
+  const cardBrand = useCatalog('finance.card_brand')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<CreditCard | null>(null)
@@ -400,8 +392,8 @@ export default function CartoesPage() {
                 {cards.map((c) => (
                   <TableRow key={c.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{c.name}</TableCell>
-                    <TableCell>{c.bank ? CARD_BANK_LABEL[c.bank] ?? c.bank : '—'}</TableCell>
-                    <TableCell>{c.brand ? brandName(c.brand) : '—'}</TableCell>
+                    <TableCell>{cardBank.labelOf(c.bank)}</TableCell>
+                    <TableCell>{cardBrand.labelOf(c.brand)}</TableCell>
                     <TableCell align="center">
                       {c.closing_day != null ? `Dia ${c.closing_day}` : '—'}
                     </TableCell>

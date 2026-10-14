@@ -68,12 +68,6 @@ export type CreditCardInput = {
   notes?: string | null
 }
 
-/** Bandeira de cartão — catálogo global fixo servido pela API. */
-export type CardBrand = {
-  slug: string
-  name: string
-}
-
 export type EntryKind = 'credit' | 'debit'
 export type EntryStatus = 'prevista' | 'realizada' | 'cancelada'
 export type IncomeType =
@@ -141,13 +135,6 @@ export type Entry = {
   asset_id?: string | null
   created_at?: string
   updated_at?: string
-}
-
-/** Motivo de desconto — catálogo global fixo servido pela API. */
-export type DiscountReason = {
-  slug: string
-  name: string
-  description: string
 }
 
 /** Motivo de cancelamento — catálogo global fixo servido pela API. */
@@ -614,12 +601,6 @@ export async function confirmEntry(id: string, payload?: ConfirmEntryPayload): P
   return data
 }
 
-/** Catálogo global de motivos de desconto (fixo, curado no backend). */
-export async function listDiscountReasons(): Promise<DiscountReason[]> {
-  const { data } = await meufinClient.get<Paginated<DiscountReason>>(`${BASE}/discount-reasons`)
-  return data.items
-}
-
 /** Desfaz a liquidação: realizada volta a prevista, detalhes de pagamento limpos. */
 export async function reopenEntry(id: string): Promise<Entry> {
   const { data } = await meufinClient.post<Entry>(`${BASE}/entries/${id}/reopen`)
@@ -1062,12 +1043,6 @@ export async function getDashboardCategoryEntries(
 export async function getInstallmentsProjection(): Promise<InstallmentsProjection> {
   const { data } = await meufinClient.get<InstallmentsProjection>(`${BASE}/installments`)
   return data
-}
-
-/** Catálogo global de bandeiras (fixo, curado no backend). */
-export async function listCardBrands(): Promise<CardBrand[]> {
-  const { data } = await meufinClient.get<Paginated<CardBrand>>(`${BASE}/card-brands`)
-  return data.items
 }
 
 /** Cartões ATIVOS — é o que entra em qualquer seletor/filtro do sistema. */

@@ -45,9 +45,8 @@ import {
   formatArea,
   formatCents,
   patrimonyKeys,
-  PROPERTY_TYPE_LABEL,
-  PROPERTY_TYPE_OPTIONS,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PropertyDocumentsDialog } from '../components/PropertyDocumentsDialog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
@@ -120,6 +119,7 @@ function PropertyFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(property)
+  const propertyType = useCatalog('patrimony.property_type')
 
   const {
     control,
@@ -195,7 +195,8 @@ function PropertyFormDialog({
                   required
                   value={field.value}
                   onChange={field.onChange}
-                  options={PROPERTY_TYPE_OPTIONS}
+                  options={propertyType.options}
+                  loading={propertyType.isLoading}
                   disableClearable
                 />
               )}
@@ -303,6 +304,7 @@ function PropertyFormDialog({
 export default function PropertiesPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const propertyType = useCatalog('patrimony.property_type')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Property | null>(null)
@@ -430,7 +432,7 @@ export default function PropertiesPage() {
                       </Box>
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" label={PROPERTY_TYPE_LABEL[p.property_type]} variant="outlined" />
+                      <Chip size="small" label={propertyType.labelOf(p.property_type)} variant="outlined" />
                     </TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
                       {p.city ? `${p.city}${p.state ? `/${p.state}` : ''}` : '—'}

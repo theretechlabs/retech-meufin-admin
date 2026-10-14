@@ -60,19 +60,13 @@ import {
 } from '../api'
 import {
   ENTRY_STATUS_COLOR,
-  ENTRY_STATUS_LABEL,
-  ENTRY_STATUS_OPTIONS,
   errorMessage,
   financeKeys,
-  INCOME_TYPE_LABEL,
-  INCOME_TYPE_OPTIONS,
-  SOURCE_KIND_LABEL,
   SOURCE_KIND_TO_INCOME_TYPE,
   MONTH_OPTIONS,
-  RECURRENCE_LABEL,
-  RECURRENCE_OPTIONS,
-  SOURCE_KIND_OPTIONS,
-  seriesToast } from '../constants'
+  seriesToast,
+} from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { useYearOptions } from '../hooks/useYearOptions'
 import { MoneyField } from '@/components/fields/MoneyField'
 import { DecimalField } from '@/components/fields/DecimalField'
@@ -192,6 +186,7 @@ function QuickSourceForm({
   onCancel: () => void
 }) {
   const qc = useQueryClient()
+  const sourceKind = useCatalog('finance.income_source_kind')
   const { control, handleSubmit } = useForm<{ name: string; kind: IncomeSource['kind'] }>({
     defaultValues: { name: '', kind: 'clt' },
   })
@@ -239,7 +234,8 @@ function QuickSourceForm({
               sx={{ minWidth: 160 }}
               value={field.value}
               onChange={field.onChange}
-              options={SOURCE_KIND_OPTIONS}
+              options={sourceKind.options}
+              loading={sourceKind.isLoading}
               disableClearable
             />
           )}
@@ -276,6 +272,9 @@ function EntryFormDialog({
   const { show } = useToast()
   const isEdit = Boolean(entry)
   const [quickSource, setQuickSource] = useState(false)
+  const sourceKind = useCatalog('finance.income_source_kind')
+  const incomeType = useCatalog('finance.income_type')
+  const recurrenceCatalog = useCatalog('finance.recurrence')
 
   const membersQuery = useQuery({
     queryKey: financeKeys.familyMembers(),
@@ -425,7 +424,7 @@ function EntryFormDialog({
                   options={(sourcesQuery.data ?? []).map((s) => ({
                     value: s.id,
                     label: s.name,
-                    description: SOURCE_KIND_LABEL[s.kind],
+                    description: sourceKind.labelOf(s.kind),
                   }))}
                 />
               )}
@@ -454,7 +453,8 @@ function EntryFormDialog({
                   label="Tipo"
                   value={field.value ?? ''}
                   onChange={field.onChange}
-                  options={INCOME_TYPE_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+                  options={incomeType.options}
+                  loading={incomeType.isLoading}
                 />
               )}
             />
@@ -504,7 +504,8 @@ function EntryFormDialog({
                   label="Recorrência"
                   value={field.value}
                   onChange={field.onChange}
-                  options={RECURRENCE_OPTIONS}
+                  options={recurrenceCatalog.options}
+                  loading={recurrenceCatalog.isLoading}
                   disabled={isEdit}
                   disableClearable
                 />
@@ -653,6 +654,9 @@ export default function ReceitasPage() {
   const yearsList = useYearOptions()
   const qc = useQueryClient()
   const { show } = useToast()
+  const entryStatus = useCatalog('finance.entry_status')
+  const incomeType = useCatalog('finance.income_type')
+  const recurrence = useCatalog('finance.recurrence')
   const [filters, setFilters] = useState<Filters>(initialFilters)
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(0)
@@ -879,7 +883,8 @@ export default function ReceitasPage() {
                 emptyLabel="Todos"
                 value={filters.status}
                 onChange={(v) => setFilter('status', v)}
-                options={ENTRY_STATUS_OPTIONS}
+                options={entryStatus.options}
+                loading={entryStatus.isLoading}
               />
             </Grid>
             <Grid size={{ xs: 6, sm: 6, md: 3 }}>
@@ -889,7 +894,8 @@ export default function ReceitasPage() {
                 emptyLabel="Todos"
                 value={filters.type}
                 onChange={(v) => setFilter('type', v)}
-                options={INCOME_TYPE_OPTIONS}
+                options={incomeType.options}
+                loading={incomeType.isLoading}
               />
             </Grid>
           </Grid>
@@ -933,7 +939,7 @@ export default function ReceitasPage() {
                     <TableCell>{formatDateBR(e.due_date)}</TableCell>
                     <TableCell>{memberName(e.family_member_id)}</TableCell>
                     <TableCell>{sourceName(e.source_id)}</TableCell>
-                    <TableCell>{e.type ? INCOME_TYPE_LABEL[e.type] ?? e.type : '—'}</TableCell>
+                    <TableCell>{incomeType.labelOf(e.type)}</TableCell>
                     <TableCell align="right" sx={{ fontWeight: 700 }}>
                       {formatCents(e.amount_cents)}
                       {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
@@ -956,7 +962,7 @@ export default function ReceitasPage() {
                           size="small"
                           variant="outlined"
                           icon={<RepeatRoundedIcon />}
-                          label={RECURRENCE_LABEL[e.recurrence] ?? e.recurrence}
+                          label={recurrence.labelOf(e.recurrence)}
                         />
                       ) : (
                         '—'
@@ -965,7 +971,7 @@ export default function ReceitasPage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={ENTRY_STATUS_LABEL[e.status] ?? e.status}
+                        label={entryStatus.labelOf(e.status)}
                         color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
                       />
                     </TableCell>

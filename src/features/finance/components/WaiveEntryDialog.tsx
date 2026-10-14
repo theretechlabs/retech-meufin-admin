@@ -10,15 +10,10 @@ import {
   TextField,
   Typography,
 } from '@mui/material'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import {
-  formatCents,
-  listDiscountReasons,
-  waiveEntry,
-  WAIVER_REASON_SLUGS,
-  type Entry,
-} from '../api'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { formatCents, waiveEntry, WAIVER_REASON_SLUGS, type Entry } from '../api'
 import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { ErrorState } from '@/features/health/components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
@@ -51,14 +46,9 @@ export function WaiveEntryDialog({
 
   const isIncome = entry.kind === 'credit'
 
-  const reasonsQuery = useQuery({
-    queryKey: financeKeys.discountReasons(),
-    queryFn: listDiscountReasons,
-  })
+  const discountReason = useCatalog('finance.discount_reason')
   const allowed = new Set<string>(WAIVER_REASON_SLUGS)
-  const options = (reasonsQuery.data ?? [])
-    .filter((r) => allowed.has(r.slug))
-    .map((r) => ({ value: r.slug, label: r.name, description: r.description }))
+  const options = discountReason.options.filter((o) => allowed.has(o.value))
 
   const mutation = useMutation({
     mutationFn: () => waiveEntry(entry.id, { reason, paid_at: date || undefined }),
@@ -91,6 +81,7 @@ export function WaiveEntryDialog({
             value={reason}
             onChange={setReason}
             options={options}
+            loading={discountReason.isLoading}
             emptyLabel="Nenhum motivo encontrado"
           />
 

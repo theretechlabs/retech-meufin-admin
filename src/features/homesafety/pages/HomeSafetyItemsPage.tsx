@@ -53,19 +53,10 @@ import {
   type HomeSafetyItem,
   type HomeSafetyItemInput,
 } from '../api'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import {
-  CATEGORY_LABEL,
-  CATEGORY_OPTIONS,
-  EVENT_TYPE_LABEL,
-  EVENT_TYPE_OPTIONS,
   PRIORITY_COLOR,
-  PRIORITY_LABEL,
-  PRIORITY_OPTIONS,
-  RISK_TYPE_LABEL,
-  RISK_TYPE_OPTIONS,
   STATUS_COLOR,
-  STATUS_FILTER_OPTIONS,
-  STATUS_LABEL,
   errorMessage,
   formatCents,
   formatDate,
@@ -181,6 +172,9 @@ function ItemFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(item)
+  const category = useCatalog('homesafety.category')
+  const riskType = useCatalog('homesafety.risk_type')
+  const priority = useCatalog('homesafety.priority')
 
   const { control, handleSubmit, reset } = useForm<FormValues>({
     values: item ? itemToForm(item) : emptyForm,
@@ -238,7 +232,8 @@ function ItemFormDialog({
                   label="Categoria"
                   value={field.value}
                   onChange={field.onChange}
-                  options={CATEGORY_OPTIONS}
+                  options={category.options}
+                  loading={category.isLoading}
                   disableClearable
                 />
               )}
@@ -251,7 +246,8 @@ function ItemFormDialog({
                   label="Tipo de risco"
                   value={field.value}
                   onChange={field.onChange}
-                  options={RISK_TYPE_OPTIONS}
+                  options={riskType.options}
+                  loading={riskType.isLoading}
                   disableClearable
                 />
               )}
@@ -264,7 +260,8 @@ function ItemFormDialog({
                   label="Prioridade"
                   value={field.value}
                   onChange={field.onChange}
-                  options={PRIORITY_OPTIONS}
+                  options={priority.options}
+                  loading={priority.isLoading}
                   disableClearable
                   fullWidth={false}
                   sx={{ minWidth: 140 }}
@@ -397,6 +394,8 @@ function ItemFormDialog({
 // ─── Catalog dialog ───────────────────────────────────────────────────────────
 
 function CatalogDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const category = useCatalog('homesafety.category')
+  const priority = useCatalog('homesafety.priority')
   const qc = useQueryClient()
   const { show } = useToast()
   const [selected, setSelected] = useState<Record<string, boolean>>({})
@@ -459,11 +458,11 @@ function CatalogDialog({ open, onClose }: { open: boolean; onClose: () => void }
                       <Typography variant="body2" fontWeight={600}>
                         {e.name}
                       </Typography>
-                      <Chip size="small" variant="outlined" label={CATEGORY_LABEL[e.category]} sx={{ fontSize: 10 }} />
+                      <Chip size="small" variant="outlined" label={category.labelOf(e.category)} sx={{ fontSize: 10 }} />
                       <Chip
                         size="small"
                         color={PRIORITY_COLOR[e.priority]}
-                        label={PRIORITY_LABEL[e.priority]}
+                        label={priority.labelOf(e.priority)}
                         sx={{ fontSize: 10 }}
                       />
                     </Stack>
@@ -519,6 +518,7 @@ const emptyEventForm: EventForm = {
 function EventsDialog({ item, onClose }: { item: HomeSafetyItem; onClose: () => void }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const eventType = useCatalog('homesafety.event_type')
   const { control, handleSubmit, reset } = useForm<EventForm>({ defaultValues: emptyEventForm })
 
   const eventsQuery = useQuery({
@@ -578,7 +578,8 @@ function EventsDialog({ item, onClose }: { item: HomeSafetyItem; onClose: () => 
                   label="Tipo"
                   value={field.value}
                   onChange={field.onChange}
-                  options={EVENT_TYPE_OPTIONS}
+                  options={eventType.options}
+                  loading={eventType.isLoading}
                   disableClearable
                 />
               )}
@@ -651,7 +652,7 @@ function EventsDialog({ item, onClose }: { item: HomeSafetyItem; onClose: () => 
               >
                 <Box sx={{ minWidth: 0 }}>
                   <Typography variant="body2" fontWeight={600}>
-                    {EVENT_TYPE_LABEL[e.event_type]} · {formatDate(e.event_date)}
+                    {eventType.labelOf(e.event_type)} · {formatDate(e.event_date)}
                   </Typography>
                   <Typography variant="caption" color="text.secondary" noWrap>
                     {[e.cost_cents ? formatCents(e.cost_cents) : '', e.provider, e.notes]
@@ -689,6 +690,10 @@ export default function HomeSafetyItemsPage() {
   const qc = useQueryClient()
   const { show } = useToast()
   const [searchParams, setSearchParams] = useSearchParams()
+  const category = useCatalog('homesafety.category')
+  const riskType = useCatalog('homesafety.risk_type')
+  const priority = useCatalog('homesafety.priority')
+  const status = useCatalog('homesafety.status')
 
   const [formOpen, setFormOpen] = useState(false)
   const [catalogOpen, setCatalogOpen] = useState(false)
@@ -782,7 +787,8 @@ export default function HomeSafetyItemsPage() {
             emptyLabel="Todas"
             value={categoryFilter}
             onChange={(v) => setParam('category', v)}
-            options={CATEGORY_OPTIONS}
+            options={category.options}
+            loading={category.isLoading}
             fullWidth={false}
             sx={{ minWidth: { sm: 180 } }}
           />
@@ -792,7 +798,8 @@ export default function HomeSafetyItemsPage() {
             emptyLabel="Todos"
             value={statusFilter}
             onChange={(v) => setParam('status', v)}
-            options={STATUS_FILTER_OPTIONS}
+            options={status.options}
+            loading={status.isLoading}
             fullWidth={false}
             sx={{ minWidth: { sm: 160 } }}
           />
@@ -845,19 +852,19 @@ export default function HomeSafetyItemsPage() {
                           <Chip
                             size="small"
                             variant="outlined"
-                            label={RISK_TYPE_LABEL[i.risk_type]}
+                            label={riskType.labelOf(i.risk_type)}
                             sx={{ fontSize: 10, height: 18 }}
                           />
                           <Chip
                             size="small"
                             color={PRIORITY_COLOR[i.priority]}
-                            label={PRIORITY_LABEL[i.priority]}
+                            label={priority.labelOf(i.priority)}
                             sx={{ fontSize: 10, height: 18 }}
                           />
                         </Stack>
                       </Box>
                     </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{CATEGORY_LABEL[i.category]}</TableCell>
+                    <TableCell sx={{ color: 'text.secondary' }}>{category.labelOf(i.category)}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>{i.location ?? '—'}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
                       {i.service_interval_months
@@ -870,7 +877,7 @@ export default function HomeSafetyItemsPage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={STATUS_LABEL[i.status]}
+                        label={status.labelOf(i.status)}
                         color={STATUS_COLOR[i.status]}
                         variant="filled"
                       />

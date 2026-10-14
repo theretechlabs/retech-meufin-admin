@@ -11,7 +11,8 @@ import {
 import CakeRoundedIcon from '@mui/icons-material/CakeRounded'
 import { useQuery } from '@tanstack/react-query'
 import { fetchBirthdays, type Birthday } from '../api'
-import { healthKeys, RELATIONSHIP_LABEL } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { healthKeys } from '../constants'
 
 /** Iniciais (até 2) a partir do nome completo. */
 function initials(name: string): string {
@@ -49,6 +50,7 @@ function daysLabel(days: number): string {
 }
 
 function BirthdayRow({ b }: { b: Birthday }) {
+  const relationship = useCatalog('health.relationship')
   const isToday = b.days_until <= 0
   const hue = avatarHue(b.id)
   return (
@@ -86,7 +88,7 @@ function BirthdayRow({ b }: { b: Birthday }) {
           {b.full_name}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block' }}>
-          {RELATIONSHIP_LABEL[b.relationship] ?? b.relationship} · {formatDayMonth(b.next_birthday)}
+          {relationship.labelOf(b.relationship)} · {formatDayMonth(b.next_birthday)}
           {' · '}faz {b.turns} anos
         </Typography>
       </Box>

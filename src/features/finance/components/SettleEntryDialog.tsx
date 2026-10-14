@@ -17,18 +17,14 @@ import {
   formatCents,
   listAccounts,
   listCards,
-  listDiscountReasons,
   reaisToCents,
   settleEntry,
   type Entry,
   type PaymentMethod,
 } from '../api'
-import {
-  ACCOUNT_PAYMENT_METHODS,
-  errorMessage,
-  financeKeys,
-  PAYMENT_METHOD_OPTIONS,
-} from '../constants'
+import { ACCOUNT_PAYMENT_METHODS, errorMessage, financeKeys } from '../constants'
+import { usePaymentMethods } from '../hooks/usePaymentMethods'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { MoneyField } from '@/components/fields/MoneyField'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { ErrorState } from '@/features/health/components/StateViews'
@@ -130,10 +126,8 @@ export function SettleEntryDialog({
 
   const { data: accounts } = useQuery({ queryKey: financeKeys.accounts(), queryFn: listAccounts })
   const { data: cards } = useQuery({ queryKey: financeKeys.cards(), queryFn: listCards })
-  const { data: discountReasons } = useQuery({
-    queryKey: financeKeys.discountReasons(),
-    queryFn: listDiscountReasons,
-  })
+  const paymentMethod = usePaymentMethods()
+  const discountReasonCatalog = useCatalog('finance.discount_reason')
 
   const {
     control,
@@ -340,11 +334,8 @@ export function SettleEntryDialog({
                   onChange={field.onChange}
                   error={!discountReason}
                   helperText={!discountReason ? 'Informe o motivo' : undefined}
-                  options={(discountReasons ?? []).map((r) => ({
-                    value: r.slug,
-                    label: r.name,
-                    description: r.description,
-                  }))}
+                  options={discountReasonCatalog.options}
+                  loading={discountReasonCatalog.isLoading}
                   placeholder="Ex.: pagamento antecipado"
                 />
               )}
@@ -406,7 +397,8 @@ export function SettleEntryDialog({
                   emptyLabel="Não informar"
                   value={field.value}
                   onChange={(v) => field.onChange(v as PaymentMethod | '')}
-                  options={PAYMENT_METHOD_OPTIONS}
+                  options={paymentMethod.manualOptions}
+                  loading={paymentMethod.isLoading}
                   helperText={
                     field.value
                       ? undefined

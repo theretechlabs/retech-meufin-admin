@@ -27,12 +27,8 @@ import {
   type PaymentMethod,
   type RenegotiationPreview,
 } from '../api'
-import {
-  ACCOUNT_PAYMENT_METHODS,
-  errorMessage,
-  financeKeys,
-  PAYMENT_METHOD_OPTIONS,
-} from '../constants'
+import { ACCOUNT_PAYMENT_METHODS, errorMessage, financeKeys } from '../constants'
+import { usePaymentMethods } from '../hooks/usePaymentMethods'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { MoneyField } from '@/components/fields/MoneyField'
 import { ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -68,6 +64,7 @@ export function PayoffDialog({
 }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const paymentMethod = usePaymentMethods()
 
   const [step, setStep] = useState(0)
   const [date, setDate] = useState(todayISO())
@@ -212,7 +209,8 @@ export function PayoffDialog({
                   sx={{ minWidth: 200, flex: 1 }}
                   value={method}
                   onChange={(v) => setMethod(v as PaymentMethod)}
-                  options={PAYMENT_METHOD_OPTIONS}
+                  options={paymentMethod.manualOptions}
+                  loading={paymentMethod.isLoading}
                   disableClearable
                 />
                 {needsAccount && (

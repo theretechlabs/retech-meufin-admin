@@ -35,13 +35,8 @@ import {
   type EntryAttachment,
   type EntryAttachmentType,
 } from '../api'
-import {
-  ATTACHMENT_TYPE_LABEL,
-  ATTACHMENT_TYPE_OPTIONS,
-  errorMessage,
-  financeKeys,
-  isAttachmentReplicable,
-} from '../constants'
+import { errorMessage, financeKeys, isAttachmentReplicable } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { RECEIPT_ACCEPT } from './EntryReceiptsSection'
@@ -146,6 +141,7 @@ function DraftFields({
   inSeries?: boolean
   applyToFuture?: boolean
 }) {
+  const attachmentType = useCatalog('finance.attachment_type')
   const showCode = HAS_CODE.has(draft.attachment_type)
   const isImage = draft.file.type.startsWith('image/')
   const pixDynamic = draft.attachment_type === 'pix_qrcode' && isPixDynamic(draft.payment_code)
@@ -157,7 +153,8 @@ function DraftFields({
         value={draft.attachment_type}
         autoFocus={autoFocusType}
         onChange={(v) => onChange({ ...draft, attachment_type: v as EntryAttachmentType })}
-        options={ATTACHMENT_TYPE_OPTIONS}
+        options={attachmentType.options}
+        loading={attachmentType.isLoading}
         disableClearable
       />
       {showCode && (
@@ -359,6 +356,7 @@ export function EntryAttachmentsSection({
   /** Lançamento em parcelamento/recorrência: habilita replicar às próximas. */
   inSeries?: boolean
 }) {
+  const attachmentType = useCatalog('finance.attachment_type')
   const [replicatedMsg, setReplicatedMsg] = useState<string | null>(null)
   const qc = useQueryClient()
   const [adding, setAdding] = useState<File | null>(null)
@@ -461,7 +459,7 @@ export function EntryAttachmentsSection({
                       size="small"
                       variant="outlined"
                       icon={a.attachment_type === 'pix_qrcode' ? <QrCode2RoundedIcon /> : undefined}
-                      label={ATTACHMENT_TYPE_LABEL[a.attachment_type ?? 'outro'] ?? a.attachment_type}
+                      label={attachmentType.labelOf(a.attachment_type ?? 'outro')}
                     />
                     <Typography variant="body2" noWrap title={a.original_file_name}>
                       {a.original_file_name}

@@ -40,7 +40,8 @@ import {
   type ExamResultItem,
   type Marker,
 } from '../api'
-import { EXAM_RESULT_STATUS, EXAM_SOURCE_TYPES, errorMessage, healthKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { PageHeader } from '../components/PageHeader'
@@ -79,6 +80,8 @@ function newDraftItem(): DraftItem {
 function ResultFormDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const sourceTypeCatalog = useCatalog('health.exam_source_type')
+  const resultStatusCatalog = useCatalog('health.exam_result_status')
   const [familyMemberId, setFamilyMemberId] = useState('')
   const [labId, setLabId] = useState('')
   const [examDate, setExamDate] = useState('')
@@ -190,14 +193,16 @@ function ResultFormDialog({ open, onClose }: { open: boolean; onClose: () => voi
               label="Origem"
               value={sourceType}
               onChange={setSourceType}
-              options={EXAM_SOURCE_TYPES}
+              options={sourceTypeCatalog.options}
+              loading={sourceTypeCatalog.isLoading}
               disableClearable
             />
             <AutocompleteField
               label="Status"
               value={status}
               onChange={setStatus}
-              options={EXAM_RESULT_STATUS}
+              options={resultStatusCatalog.options}
+              loading={resultStatusCatalog.isLoading}
               disableClearable
             />
           </Stack>
@@ -321,6 +326,7 @@ function ResultFormDialog({ open, onClose }: { open: boolean; onClose: () => voi
 export default function ExamResultsPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const resultStatusCatalog = useCatalog('health.exam_result_status')
   const [formOpen, setFormOpen] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
   const [toDelete, setToDelete] = useState<ExamResult | null>(null)
@@ -433,7 +439,8 @@ export default function ExamResultsPage() {
               setStatus(v)
               setPage(0)
             }}
-            options={EXAM_RESULT_STATUS}
+            options={resultStatusCatalog.options}
+            loading={resultStatusCatalog.isLoading}
           />
         </Stack>
       </Card>

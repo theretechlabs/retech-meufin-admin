@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Autocomplete, Box, Stack, TextField, Typography } from '@mui/material'
 import { useQuery } from '@tanstack/react-query'
-import { searchCatalog, type MaintenanceCatalogItem, type OSItemCategory } from '../api'
-import { OS_ITEM_CATEGORY_LABEL, vehicleKeys } from '../constants'
+import { searchCatalog, type MaintenanceCatalogItem } from '../api'
+import { vehicleKeys } from '../constants'
 
 /**
  * Item / serviço de uma ordem de serviço, buscado no catálogo de manutenção
@@ -12,12 +12,17 @@ import { OS_ITEM_CATEGORY_LABEL, vehicleKeys } from '../constants'
  * motivo: `freeSolo` — o usuário pode digitar um item fora do catálogo. Os
  * campos compartilhados (AutocompleteField/AsyncAutocompleteField) trabalham
  * com `value: string` = id de uma opção e não têm esse modo.
+ *
+ * `categoryLabel` é o `labelOf` do catálogo `vehicle.os_item_category`,
+ * passado pelo componente chamador (agrupa as opções por categoria).
  */
 export function CatalogItemField({
+  categoryLabel,
   defaultValue,
   onSelect,
   onType,
 }: {
+  categoryLabel: (slug: string) => string
   defaultValue: string
   onSelect: (item: MaintenanceCatalogItem) => void
   onType: (text: string) => void
@@ -41,9 +46,7 @@ export function CatalogItemField({
       onClose={() => setOpen(false)}
       options={opts}
       getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
-      groupBy={(o) =>
-        typeof o === 'string' ? '' : (OS_ITEM_CATEGORY_LABEL[o.category as OSItemCategory] ?? o.category)
-      }
+      groupBy={(o) => (typeof o === 'string' ? '' : categoryLabel(o.category))}
       filterOptions={(x) => x}
       noOptionsText={inputVal.length < 1 ? 'Digite para buscar' : 'Nenhum item encontrado'}
       inputValue={inputVal}

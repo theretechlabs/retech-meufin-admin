@@ -35,11 +35,10 @@ import {
   YAxis,
 } from 'recharts'
 import { getHomeSafetyDashboard, type HomeSafetyItem, type HomeSafetyStatus } from '../api'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import {
   CATEGORY_COLOR,
-  CATEGORY_LABEL,
   STATUS_COLOR,
-  STATUS_LABEL,
   errorMessage,
   formatCents,
   formatDate,
@@ -98,6 +97,7 @@ function StatCard({
 
 function DueRow({ item, danger }: { item: HomeSafetyItem; danger?: boolean }) {
   const theme = useTheme()
+  const category = useCatalog('homesafety.category')
   return (
     <Stack
       direction="row"
@@ -116,7 +116,7 @@ function DueRow({ item, danger }: { item: HomeSafetyItem; danger?: boolean }) {
           {item.name}
         </Typography>
         <Typography variant="caption" color="text.secondary" noWrap>
-          {CATEGORY_LABEL[item.category]}
+          {category.labelOf(item.category)}
           {item.location ? ` · ${item.location}` : ''} · vencimento {formatDate(item.next_due_date)}
         </Typography>
       </Box>
@@ -133,6 +133,8 @@ function DueRow({ item, danger }: { item: HomeSafetyItem; danger?: boolean }) {
 export default function HomeSafetyDashboardPage() {
   const theme = useTheme()
   const navigate = useNavigate()
+  const category = useCatalog('homesafety.category')
+  const status = useCatalog('homesafety.status')
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: homeSafetyKeys.dashboard(),
@@ -150,11 +152,11 @@ export default function HomeSafetyDashboardPage() {
   const categoryChart = useMemo(
     () =>
       (data?.by_category ?? []).map((c) => ({
-        name: CATEGORY_LABEL[c.category],
+        name: category.labelOf(c.category),
         value: c.count,
         color: CATEGORY_COLOR[c.category],
       })),
-    [data],
+    [data, category],
   )
 
   const costChart = useMemo(
@@ -407,7 +409,7 @@ export default function HomeSafetyDashboardPage() {
             {(['vencido', 'atencao', 'proximo', 'ok', 'sem_controle'] as HomeSafetyStatus[]).map((st) => (
               <Chip
                 key={st}
-                label={`${STATUS_LABEL[st]}: ${statusMap[st] ?? 0}`}
+                label={`${status.labelOf(st)}: ${statusMap[st] ?? 0}`}
                 color={STATUS_COLOR[st]}
                 variant="outlined"
                 onClick={() => goToItems(st)}

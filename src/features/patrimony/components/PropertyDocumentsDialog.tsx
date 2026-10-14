@@ -38,9 +38,8 @@ import {
   errorMessage,
   formatDate,
   patrimonyKeys,
-  PROPERTY_DOC_TYPE_LABEL,
-  PROPERTY_DOC_TYPE_OPTIONS,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
@@ -63,6 +62,7 @@ export function PropertyDocumentsDialog({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const propertyDocType = useCatalog('patrimony.property_doc_type')
   const [file, setFile] = useState<File | null>(null)
   const [toDelete, setToDelete] = useState<PropertyDocument | null>(null)
 
@@ -124,7 +124,8 @@ export function PropertyDocumentsDialog({
                     required
                     value={field.value}
                     onChange={field.onChange}
-                    options={PROPERTY_DOC_TYPE_OPTIONS}
+                    options={propertyDocType.options}
+                    loading={propertyDocType.isLoading}
                     disableClearable
                   />
                 )}
@@ -187,7 +188,7 @@ export function PropertyDocumentsDialog({
                   {docs.map((doc) => (
                     <TableRow key={doc.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>
-                        {PROPERTY_DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type}
+                        {propertyDocType.labelOf(doc.doc_type)}
                       </TableCell>
                       <TableCell sx={{ color: 'text.secondary' }}>{doc.file_name}</TableCell>
                       <TableCell sx={{ color: 'text.secondary' }}>{doc.notes || '—'}</TableCell>

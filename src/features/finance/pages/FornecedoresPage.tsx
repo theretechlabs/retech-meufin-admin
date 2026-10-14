@@ -36,15 +36,8 @@ import {
   type Supplier,
   type SupplierInput,
 } from '../api'
-import {
-  errorMessage,
-  financeKeys,
-  SUPPLIER_BILLING_LABEL,
-  SUPPLIER_BILLING_OPTIONS,
-  SUPPLIER_CATEGORY_LABEL,
-  SUPPLIER_CATEGORY_OPTIONS,
-  BANK_ACCOUNT_TYPE_OPTIONS,
-} from '../constants'
+import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -95,6 +88,9 @@ function SupplierFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(supplier)
+  const supplierCategory = useCatalog('finance.supplier_category')
+  const supplierBilling = useCatalog('finance.supplier_billing_type')
+  const bankAccountType = useCatalog('finance.bank_account_type')
 
   const {
     control,
@@ -187,7 +183,8 @@ function SupplierFormDialog({
                 required
                 value={field.value}
                 onChange={field.onChange}
-                options={SUPPLIER_CATEGORY_OPTIONS}
+                options={supplierCategory.options}
+                loading={supplierCategory.isLoading}
                 disableClearable
               />
             )}
@@ -201,7 +198,8 @@ function SupplierFormDialog({
                 emptyLabel="Nenhuma"
                 value={field.value ?? ''}
                 onChange={field.onChange}
-                options={SUPPLIER_BILLING_OPTIONS}
+                options={supplierBilling.options}
+                loading={supplierBilling.isLoading}
               />
             )}
           />
@@ -291,7 +289,8 @@ function SupplierFormDialog({
                     sx={{ minWidth: 140 }}
                     value={field.value ?? ''}
                     onChange={field.onChange}
-                    options={BANK_ACCOUNT_TYPE_OPTIONS}
+                    options={bankAccountType.options}
+                    loading={bankAccountType.isLoading}
                     disableClearable
                   />
                 )}
@@ -345,6 +344,8 @@ function SupplierFormDialog({
 export default function FornecedoresPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const supplierCategory = useCatalog('finance.supplier_category')
+  const supplierBilling = useCatalog('finance.supplier_billing_type')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Supplier | null>(null)
   const [toDelete, setToDelete] = useState<Supplier | null>(null)
@@ -433,7 +434,8 @@ export default function FornecedoresPage() {
               setCategory(v)
               setPage(0)
             }}
-            options={SUPPLIER_CATEGORY_OPTIONS}
+            options={supplierCategory.options}
+            loading={supplierCategory.isLoading}
           />
           <AutocompleteField
             label="Status"
@@ -488,11 +490,9 @@ export default function FornecedoresPage() {
                 {suppliers.map((s) => (
                   <TableRow key={s.id} hover>
                     <TableCell sx={{ fontWeight: 600 }}>{s.name}</TableCell>
-                    <TableCell>{SUPPLIER_CATEGORY_LABEL[s.category] ?? s.category}</TableCell>
+                    <TableCell>{supplierCategory.labelOf(s.category)}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
-                      {s.default_billing_type
-                        ? SUPPLIER_BILLING_LABEL[s.default_billing_type] ?? s.default_billing_type
-                        : '—'}
+                      {supplierBilling.labelOf(s.default_billing_type)}
                     </TableCell>
                     <TableCell>
                       <Chip

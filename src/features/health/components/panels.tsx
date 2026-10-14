@@ -30,7 +30,6 @@ import {
 } from 'recharts'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import type { EvolutionMode, EvolutionPoint, PanelMarker } from '../api'
-import { MARKER_CATEGORY_LABEL } from '../constants'
 import { lp } from '@/theme/tokens'
 import { formatDateBR } from '@/utils/dates'
 
@@ -55,8 +54,12 @@ export const PANEL_TITLE: Record<string, string> = {
   outros: 'Outros marcadores',
 }
 
-export function panelTitle(category: string): string {
-  return PANEL_TITLE[category] ?? MARKER_CATEGORY_LABEL[category] ?? `Painel ${category}`
+/**
+ * Título do painel por categoria. Categoria fora do mapa cai no `fallback`
+ * (ex.: rótulo do catálogo `health.marker_category`, passado pelo chamador).
+ */
+export function panelTitle(category: string, fallback?: string): string {
+  return PANEL_TITLE[category] ?? fallback ?? `Painel ${category}`
 }
 
 // ---------------------------------------------------------------------------

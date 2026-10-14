@@ -50,14 +50,10 @@ import {
   educationKeys,
   errorMessage,
   formatCents,
-  ITEM_CATEGORY_LABEL,
-  ITEM_CATEGORY_OPTIONS,
   LIST_STATUS_COLOR,
-  LIST_STATUS_LABEL,
-  LIST_STATUS_OPTIONS,
-  STAGE_LABEL,
   toCents,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
@@ -88,6 +84,7 @@ function DiffChip({ cents }: { cents: number | null }) {
 
 function AddItemRow({ listId }: { listId: string }) {
   const queryClient = useQueryClient()
+  const itemCategory = useCatalog('education.item_category')
   const [name, setName] = useState('')
   const [category, setCategory] = useState<ItemCategory>('papelaria')
   const [quantity, setQuantity] = useState('1')
@@ -123,7 +120,8 @@ function AddItemRow({ listId }: { listId: string }) {
         size="small"
         value={category}
         onChange={(v) => setCategory(v as ItemCategory)}
-        options={ITEM_CATEGORY_OPTIONS}
+        options={itemCategory.options}
+        loading={itemCategory.isLoading}
         disableClearable
         fullWidth={false}
         sx={{ minWidth: 130 }}
@@ -241,6 +239,8 @@ function SupplyListCard({
   onPurchase: (listId: string, item: SupplyItem) => void
 }) {
   const queryClient = useQueryClient()
+  const listStatus = useCatalog('education.list_status')
+  const itemCategory = useCatalog('education.item_category')
 
   const togglePurchased = useMutation({
     mutationFn: (item: SupplyItem) =>
@@ -311,7 +311,7 @@ function SupplyListCard({
           <Stack direction="row" spacing={1} alignItems="center">
             <Chip
               size="small"
-              label={LIST_STATUS_LABEL[list.status]}
+              label={listStatus.labelOf(list.status)}
               color={LIST_STATUS_COLOR[list.status]}
             />
             <Typography variant="body2" color="text.secondary">
@@ -333,7 +333,8 @@ function SupplyListCard({
             size="small"
             value={list.status}
             onChange={(v) => changeStatus.mutate(v as ListStatus)}
-            options={LIST_STATUS_OPTIONS}
+            options={listStatus.options}
+            loading={listStatus.isLoading}
             disableClearable
             fullWidth={false}
             sx={{ minWidth: 150 }}
@@ -395,7 +396,7 @@ function SupplyListCard({
                       </Typography>
                     ) : null}
                   </TableCell>
-                  <TableCell>{ITEM_CATEGORY_LABEL[it.category] ?? it.category}</TableCell>
+                  <TableCell>{itemCategory.labelOf(it.category)}</TableCell>
                   <TableCell align="right">{it.quantity}</TableCell>
                   <TableCell align="right">
                     {formatCents(Math.round(it.reference_price_cents * it.quantity))}
@@ -432,6 +433,8 @@ function SupplyListCard({
 
 export default function SupplyListsPage() {
   const queryClient = useQueryClient()
+  const listStatus = useCatalog('education.list_status')
+  const stage = useCatalog('education.stage')
   const [yearFilter, setYearFilter] = useState<number | ''>(CURRENT_YEAR)
   const [statusFilter, setStatusFilter] = useState<string>('')
   const [createOpen, setCreateOpen] = useState(false)
@@ -512,7 +515,8 @@ export default function SupplyListsPage() {
           emptyLabel="Todos"
           value={statusFilter}
           onChange={setStatusFilter}
-          options={LIST_STATUS_OPTIONS}
+          options={listStatus.options}
+          loading={listStatus.isLoading}
           fullWidth={false}
           sx={{ minWidth: 150 }}
         />
@@ -575,7 +579,7 @@ export default function SupplyListsPage() {
                 onChange={setNewEnrollmentId}
                 options={enrollments.map((en) => ({
                   value: en.id,
-                  label: `${en.member_name ?? 'Membro'} · ${en.school_year} · ${STAGE_LABEL[en.stage] ?? en.stage}`,
+                  label: `${en.member_name ?? 'Membro'} · ${en.school_year} · ${stage.labelOf(en.stage)}`,
                 }))}
                 disableClearable
               />

@@ -33,7 +33,8 @@ import {
   type Entry,
   type Renegotiation,
 } from '../api'
-import { errorMessage, financeKeys, RENEGOTIATION_KIND_LABEL } from '../constants'
+import { errorMessage, financeKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { DebtLineageDialog } from '../components/DebtLineageDialog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -60,8 +61,9 @@ function AdjustmentChip({ cents }: { cents: number }) {
 }
 
 function KindChip({ kind }: { kind: Renegotiation['kind'] }) {
+  const renegotiationKind = useCatalog('finance.renegotiation_kind')
   const color = kind === 'renegociacao' ? 'info' : kind === 'quitacao' ? 'success' : 'primary'
-  return <Chip size="small" color={color} variant="outlined" label={RENEGOTIATION_KIND_LABEL[kind] ?? kind} />
+  return <Chip size="small" color={color} variant="outlined" label={renegotiationKind.labelOf(kind)} />
 }
 
 function EntriesTable({ title, entries }: { title: string; entries: Entry[] }) {

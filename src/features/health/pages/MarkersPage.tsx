@@ -40,7 +40,8 @@ import {
   type MarkerConflict,
   type MarkerInput,
 } from '../api'
-import { errorMessage, healthKeys, MARKER_CATEGORIES, MARKER_CATEGORY_LABEL } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { errorMessage, healthKeys } from '../constants'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -83,6 +84,7 @@ function MarkerFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(marker)
+  const markerCategory = useCatalog('health.marker_category')
   const [conflict, setConflict] = useState<MarkerConflict | null>(null)
 
   const {
@@ -174,7 +176,8 @@ function MarkerFormDialog({
                   label="Categoria"
                   value={field.value}
                   onChange={field.onChange}
-                  options={MARKER_CATEGORIES}
+                  options={markerCategory.options}
+                  loading={markerCategory.isLoading}
                   required
                   disableClearable
                   error={Boolean(errors.category)}
@@ -234,6 +237,7 @@ function MarkerFormDialog({
 export default function MarkersPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const markerCategory = useCatalog('health.marker_category')
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState('')
   const [page, setPage] = useState(0)
@@ -320,7 +324,8 @@ export default function MarkersPage() {
               setCategory(v)
               setPage(0)
             }}
-            options={MARKER_CATEGORIES}
+            options={markerCategory.options}
+            loading={markerCategory.isLoading}
           />
         </Stack>
       </Card>
@@ -371,7 +376,7 @@ export default function MarkersPage() {
                         )}
                       </Stack>
                     </TableCell>
-                    <TableCell>{MARKER_CATEGORY_LABEL[m.category] ?? m.category}</TableCell>
+                    <TableCell>{markerCategory.labelOf(m.category)}</TableCell>
                     <TableCell>{m.canonical_unit || '—'}</TableCell>
                     <TableCell>{m.comparability_class}</TableCell>
                     <TableCell>

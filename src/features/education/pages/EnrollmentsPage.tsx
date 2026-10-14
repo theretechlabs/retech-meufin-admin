@@ -42,11 +42,9 @@ import {
   educationKeys,
   errorMessage,
   formatCents,
-  SHIFT_OPTIONS,
-  STAGE_LABEL,
-  STAGE_OPTIONS,
   toCents,
 } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { listFamilyMembers } from '@/features/health/api'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -82,6 +80,8 @@ function emptyForm(): FormState {
 
 export default function EnrollmentsPage() {
   const queryClient = useQueryClient()
+  const stage = useCatalog('education.stage')
+  const shift = useCatalog('education.shift')
   const [yearFilter, setYearFilter] = useState<number | ''>('')
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Enrollment | null>(null)
@@ -245,7 +245,7 @@ export default function EnrollmentsPage() {
                     <TableCell>
                       <Chip size="small" label={e.school_year} variant="outlined" />
                     </TableCell>
-                    <TableCell>{STAGE_LABEL[e.stage] ?? e.stage}</TableCell>
+                    <TableCell>{stage.labelOf(e.stage)}</TableCell>
                     <TableCell>{e.school_name ?? '—'}</TableCell>
                     <TableCell>{e.grade ?? '—'}</TableCell>
                     <TableCell align="right">{formatCents(e.monthly_fee_cents)}</TableCell>
@@ -305,7 +305,8 @@ export default function EnrollmentsPage() {
                 label="Etapa"
                 value={form.stage}
                 onChange={(v) => setForm({ ...form, stage: v as Stage })}
-                options={STAGE_OPTIONS}
+                options={stage.options}
+                loading={stage.isLoading}
                 disableClearable
               />
             </Grid>
@@ -315,7 +316,8 @@ export default function EnrollmentsPage() {
                 emptyLabel="Não informar"
                 value={form.shift}
                 onChange={(v) => setForm({ ...form, shift: v as '' | Shift })}
-                options={SHIFT_OPTIONS}
+                options={shift.options}
+                loading={shift.isLoading}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 8 }}>

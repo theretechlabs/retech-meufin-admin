@@ -55,18 +55,8 @@ import {
   type AppointmentKind,
   type AppointmentStatus,
 } from '../api'
-import {
-  APPOINTMENT_KIND_LABEL,
-  APPOINTMENT_KIND_OPTIONS,
-  APPOINTMENT_STATUS_META,
-  APPOINTMENT_STATUS_OPTIONS,
-  errorMessage,
-  formatCents,
-  healthKeys,
-  SPECIALTY_LABEL,
-  SPECIALTY_OPTIONS,
-  toCents,
-} from '../constants'
+import { APPOINTMENT_STATUS_COLOR, errorMessage, formatCents, healthKeys, toCents } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -139,8 +129,14 @@ function StatCard({
 }
 
 function StatusChip({ status }: { status: AppointmentStatus }) {
-  const meta = APPOINTMENT_STATUS_META[status]
-  return <Chip size="small" label={meta?.label ?? status} color={meta?.color ?? 'default'} />
+  const appointmentStatus = useCatalog('health.appointment_status')
+  return (
+    <Chip
+      size="small"
+      label={appointmentStatus.labelOf(status)}
+      color={APPOINTMENT_STATUS_COLOR[status] ?? 'default'}
+    />
+  )
 }
 
 type AppointmentFormValues = {
@@ -183,6 +179,8 @@ function AppointmentFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(appointment)
+  const appointmentKind = useCatalog('health.appointment_kind')
+  const specialty = useCatalog('health.specialty')
 
   const { data: members } = useQuery({
     queryKey: healthKeys.familyMembers(),
@@ -293,7 +291,8 @@ function AppointmentFormDialog({
               label="Tipo"
               value={form.kind}
               onChange={(v) => patch({ kind: v as AppointmentKind })}
-              options={APPOINTMENT_KIND_OPTIONS}
+              options={appointmentKind.options}
+              loading={appointmentKind.isLoading}
               disableClearable
             />
             <AutocompleteField
@@ -301,7 +300,8 @@ function AppointmentFormDialog({
               emptyLabel="Não informada"
               value={form.specialty}
               onChange={(v) => patch({ specialty: v })}
-              options={SPECIALTY_OPTIONS}
+              options={specialty.options}
+              loading={specialty.isLoading}
             />
           </Stack>
 
@@ -447,6 +447,9 @@ function CompleteDialog({
 export default function AppointmentsPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const appointmentStatus = useCatalog('health.appointment_status')
+  const appointmentKind = useCatalog('health.appointment_kind')
+  const specialty = useCatalog('health.specialty')
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Appointment | null>(null)
   const [completing, setCompleting] = useState<Appointment | null>(null)
@@ -583,7 +586,8 @@ export default function AppointmentsPage() {
             emptyLabel="Todos"
             value={status}
             onChange={(v) => setStatus(v as AppointmentStatus | '')}
-            options={APPOINTMENT_STATUS_OPTIONS}
+            options={appointmentStatus.options}
+            loading={appointmentStatus.isLoading}
           />
           <AutocompleteField
             label="Tipo"
@@ -593,7 +597,8 @@ export default function AppointmentsPage() {
             emptyLabel="Todos"
             value={kind}
             onChange={(v) => setKind(v as AppointmentKind | '')}
-            options={APPOINTMENT_KIND_OPTIONS}
+            options={appointmentKind.options}
+            loading={appointmentKind.isLoading}
           />
           <TextField
             type="date"
@@ -664,10 +669,10 @@ export default function AppointmentsPage() {
                         <Chip
                           size="small"
                           variant="outlined"
-                          label={APPOINTMENT_KIND_LABEL[a.kind] ?? a.kind}
+                          label={appointmentKind.labelOf(a.kind)}
                         />
                       </TableCell>
-                      <TableCell>{a.specialty ? SPECIALTY_LABEL[a.specialty] ?? a.specialty : '—'}</TableCell>
+                      <TableCell>{specialty.labelOf(a.specialty)}</TableCell>
                       <TableCell>
                         <Stack spacing={0.25}>
                           <span>{a.professional_name || '—'}</span>
@@ -757,7 +762,7 @@ export default function AppointmentsPage() {
                   {agenda.by_specialty.map((s) => (
                     <Stack key={s.specialty} direction="row" justifyContent="space-between">
                       <Typography variant="body2">
-                        {SPECIALTY_LABEL[s.specialty] ?? s.specialty}
+                        {specialty.labelOf(s.specialty)}
                       </Typography>
                       <Typography variant="body2" fontWeight={700}>
                         {s.count}

@@ -29,12 +29,8 @@ import {
   uploadDocument,
   type HealthDocument,
 } from '../api'
-import {
-  errorMessage,
-  HEALTH_DOC_TYPE_LABEL,
-  HEALTH_DOC_TYPE_OPTIONS,
-  healthKeys,
-} from '../constants'
+import { errorMessage, healthKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -56,6 +52,7 @@ function formatSize(bytes?: number | null): string {
 export default function HealthDocumentsPage() {
   const qc = useQueryClient()
   const { show } = useToast()
+  const documentType = useCatalog('health.document_type')
   const [memberId, setMemberId] = useState('')
   const [docType, setDocType] = useState('')
   const [page, setPage] = useState(0)
@@ -147,7 +144,8 @@ export default function HealthDocumentsPage() {
               setDocType(v)
               setPage(0)
             }}
-            options={HEALTH_DOC_TYPE_OPTIONS}
+            options={documentType.options}
+            loading={documentType.isLoading}
           />
           <Box sx={{ flex: 1 }} />
           <AutocompleteField
@@ -157,7 +155,8 @@ export default function HealthDocumentsPage() {
             sx={{ minWidth: 180 }}
             value={uploadType}
             onChange={setUploadType}
-            options={HEALTH_DOC_TYPE_OPTIONS}
+            options={documentType.options}
+            loading={documentType.isLoading}
             disableClearable
           />
           <AttachFileButton
@@ -214,7 +213,7 @@ export default function HealthDocumentsPage() {
                       </Typography>
                     </TableCell>
                     <TableCell>
-                      <Chip size="small" variant="outlined" label={HEALTH_DOC_TYPE_LABEL[d.document_type] ?? d.document_type} />
+                      <Chip size="small" variant="outlined" label={documentType.labelOf(d.document_type)} />
                     </TableCell>
                     <TableCell>{memberName(d.family_member_id)}</TableCell>
                     <TableCell>

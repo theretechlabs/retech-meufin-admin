@@ -47,17 +47,8 @@ import {
   type VehicleInput,
   type VehicleUpdateInput,
 } from '../api'
-import {
-  errorMessage,
-  FIPE_VEHICLE_TYPE_OPTIONS,
-  FUEL_TYPE_OPTIONS,
-  vehicleKeys,
-  VEHICLE_STATUS_COLOR,
-  VEHICLE_STATUS_LABEL,
-  VEHICLE_STATUS_OPTIONS,
-  FUEL_TYPE_LABEL,
-  formatKM,
-} from '../constants'
+import { errorMessage, vehicleKeys, VEHICLE_STATUS_COLOR, formatKM } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -152,6 +143,9 @@ function VehicleFormDialog({
   const qc = useQueryClient()
   const { show } = useToast()
   const isEdit = Boolean(vehicle)
+  const fipeVehicleTypeCatalog = useCatalog('vehicle.fipe_vehicle_type')
+  const fuelType = useCatalog('vehicle.fuel_type')
+  const vehicleStatus = useCatalog('vehicle.vehicle_status')
 
   const {
     control,
@@ -293,7 +287,8 @@ function VehicleFormDialog({
                         setValue('fipe_year_code', '')
                         setValue('fipe_code', '')
                       }}
-                      options={FIPE_VEHICLE_TYPE_OPTIONS}
+                      options={fipeVehicleTypeCatalog.options}
+                      loading={fipeVehicleTypeCatalog.isLoading}
                       disableClearable
                     />
                   )}
@@ -483,7 +478,8 @@ function VehicleFormDialog({
                   required
                   value={field.value}
                   onChange={field.onChange}
-                  options={FUEL_TYPE_OPTIONS}
+                  options={fuelType.options}
+                  loading={fuelType.isLoading}
                   disableClearable
                 />
               )}
@@ -574,7 +570,8 @@ function VehicleFormDialog({
                       sx={{ minWidth: 160 }}
                       value={field.value}
                       onChange={field.onChange}
-                      options={VEHICLE_STATUS_OPTIONS}
+                      options={vehicleStatus.options}
+                      loading={vehicleStatus.isLoading}
                       disableClearable
                     />
                   )}
@@ -634,6 +631,8 @@ export default function VehiclesPage() {
   const qc = useQueryClient()
   const { show } = useToast()
   const navigate = useNavigate()
+  const fuelType = useCatalog('vehicle.fuel_type')
+  const vehicleStatus = useCatalog('vehicle.vehicle_status')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Vehicle | null>(null)
@@ -731,7 +730,8 @@ export default function VehiclesPage() {
               setStatusFilter(v)
               setPage(0)
             }}
-            options={VEHICLE_STATUS_OPTIONS}
+            options={vehicleStatus.options}
+            loading={vehicleStatus.isLoading}
           />
         </Stack>
       </Card>
@@ -788,7 +788,7 @@ export default function VehiclesPage() {
                     <TableCell sx={{ color: 'text.secondary' }}>{v.year_model}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>{v.plate ?? '—'}</TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
-                      {FUEL_TYPE_LABEL[v.fuel_type] ?? v.fuel_type}
+                      {fuelType.labelOf(v.fuel_type)}
                     </TableCell>
                     <TableCell sx={{ color: 'text.secondary' }}>
                       {formatKM(v.current_odometer)}
@@ -796,7 +796,7 @@ export default function VehiclesPage() {
                     <TableCell>
                       <Chip
                         size="small"
-                        label={VEHICLE_STATUS_LABEL[v.status]}
+                        label={vehicleStatus.labelOf(v.status)}
                         color={VEHICLE_STATUS_COLOR[v.status]}
                         variant="filled"
                       />

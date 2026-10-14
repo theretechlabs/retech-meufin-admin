@@ -34,7 +34,8 @@ import {
   type WarrantyDocType,
   type WarrantyDocument,
 } from '../api'
-import { DOC_TYPE_LABEL, DOC_TYPE_OPTIONS, errorMessage, formatDate, warrantyKeys } from '../constants'
+import { errorMessage, formatDate, warrantyKeys } from '../constants'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
@@ -63,6 +64,7 @@ export function WarrantyDocumentsDialog({
   onClose: () => void
 }) {
   const qc = useQueryClient()
+  const docType = useCatalog('warranty.doc_type')
   const [file, setFile] = useState<File | null>(null)
   const [toDelete, setToDelete] = useState<WarrantyDocument | null>(null)
 
@@ -123,7 +125,8 @@ export function WarrantyDocumentsDialog({
                     label="Tipo de documento"
                     value={field.value}
                     onChange={field.onChange}
-                    options={DOC_TYPE_OPTIONS}
+                    options={docType.options}
+                    loading={docType.isLoading}
                     required
                     disableClearable
                   />
@@ -181,7 +184,7 @@ export function WarrantyDocumentsDialog({
                   {docs.map((doc) => (
                     <TableRow key={doc.id} hover>
                       <TableCell sx={{ fontWeight: 600 }}>
-                        {DOC_TYPE_LABEL[doc.doc_type] ?? doc.doc_type}
+                        {docType.labelOf(doc.doc_type)}
                       </TableCell>
                       <TableCell sx={{ color: 'text.secondary' }}>{doc.original_file_name}</TableCell>
                       <TableCell>{formatSize(doc.size_bytes)}</TableCell>
