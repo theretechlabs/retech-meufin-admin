@@ -485,7 +485,7 @@ export default function ExamResultsPage() {
                     <TableCell>{formatDateBR(r.exam_date)}</TableCell>
                     <TableCell>{r.items?.length ?? 0}</TableCell>
                     <TableCell>
-                      <Chip size="small" label={r.status} variant="outlined" />
+                      <Chip size="small" label={resultStatusCatalog.labelOf(r.status)} variant="outlined" />
                     </TableCell>
                     <TableCell>
                       <Box sx={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
