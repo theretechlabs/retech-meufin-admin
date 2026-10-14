@@ -11,7 +11,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -32,6 +31,7 @@ import FolderRoundedIcon from '@mui/icons-material/FolderRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import {
   createProperty,
   deleteProperty,
@@ -188,13 +188,16 @@ function PropertyFormDialog({
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} select label="Tipo" sx={{ minWidth: 180 }} required>
-                  {PROPERTY_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Tipo"
+                  fullWidth={false}
+                  sx={{ minWidth: 180 }}
+                  required
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={PROPERTY_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
           </Stack>

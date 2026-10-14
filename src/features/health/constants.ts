@@ -171,6 +171,7 @@ export const healthKeys = {
   birthdays: () => [...healthKeys.all, 'birthdays'] as const,
   labs: () => [...healthKeys.all, 'labs'] as const,
   markers: (params: Record<string, unknown>) => [...healthKeys.all, 'markers', params] as const,
+  marker: (id: string) => [...healthKeys.all, 'marker', id] as const,
   examResults: () => [...healthKeys.all, 'exam-results'] as const,
   documents: () => [...healthKeys.all, 'documents'] as const,
   memberDocuments: (memberId: string) =>
@@ -237,6 +238,36 @@ export const PLAN_DOC_TYPE_OPTIONS: { value: string; label: string }[] = [
 ]
 
 export const PLAN_DOC_TYPE_LABEL: Record<string, string> = PLAN_DOC_TYPE_OPTIONS.reduce(
+  (acc, o) => ({ ...acc, [o.value]: o.label }),
+  {} as Record<string, string>
+)
+
+/** Validade do link público de compartilhamento (horas). */
+export const SHARE_TTL_OPTIONS: { value: number; label: string }[] = [
+  { value: 1, label: '1 hora' },
+  { value: 6, label: '6 horas' },
+  { value: 12, label: '12 horas' },
+  { value: 24, label: '24 horas' },
+  { value: 48, label: '48 horas' },
+  { value: 72, label: '3 dias' },
+  { value: 168, label: '7 dias' },
+]
+
+/**
+ * Tipos de documento de saúde (health_documents.document_type). Chaves VÁLIDAS
+ * no backend (dom.ValidDocumentType) — chave fora da lista derruba o upload
+ * com "document_type inválido".
+ */
+export const HEALTH_DOC_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'exam_result', label: 'Resultado de exame' },
+  { value: 'exam_request', label: 'Solicitação' },
+  { value: 'image_report', label: 'Exame de imagem' },
+  { value: 'medical_report', label: 'Laudo médico' },
+  { value: 'prescription', label: 'Receita' },
+  { value: 'other', label: 'Outro' },
+]
+
+export const HEALTH_DOC_TYPE_LABEL: Record<string, string> = HEALTH_DOC_TYPE_OPTIONS.reduce(
   (acc, o) => ({ ...acc, [o.value]: o.label }),
   {} as Record<string, string>
 )

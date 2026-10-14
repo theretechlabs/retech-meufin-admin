@@ -11,7 +11,6 @@ import {
   DialogTitle,
   IconButton,
   Divider,
-  MenuItem,
   Step,
   StepLabel,
   Stepper,
@@ -42,9 +41,9 @@ import {
   type PurchaseSuggestion,
 } from '../api'
 import {
-  ENTRY_STATUS_LABEL,
   errorMessage,
   financeKeys,
+  SETTLEABLE_STATUS_OPTIONS,
 } from '../constants'
 import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { ReconciliationDialog } from './ReconciliationDialog'
@@ -270,20 +269,13 @@ export function ImportInvoiceDialog({
             {uploadMutation.isError && (
               <Alert severity="error">{errorMessage(uploadMutation.error)}</Alert>
             )}
-            <TextField
-              select
+            <AutocompleteField
               label="Cartão"
-              fullWidth
+              emptyLabel="Sem cartão"
               value={cardId}
-              onChange={(e) => setCardId(e.target.value)}
-            >
-              <MenuItem value="">Sem cartão</MenuItem>
-              {cards.map((c) => (
-                <MenuItem key={c.id} value={c.id}>
-                  {c.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setCardId}
+              options={cards.map((c) => ({ value: c.id, label: c.name }))}
+            />
 
             <AttachFileButton
               label={file ? file.name : 'Selecionar PDF ou imagem'}
@@ -350,16 +342,15 @@ export function ImportInvoiceDialog({
                 onChange={(e) => setDescription(e.target.value)}
                 sx={{ flex: 1, minWidth: 220 }}
               />
-              <TextField
-                select
+              <AutocompleteField
                 label="Status"
+                fullWidth={false}
+                sx={{ minWidth: 200 }}
                 value={invoiceStatus}
-                onChange={(e) => setInvoiceStatus(e.target.value as 'prevista' | 'realizada')}
-                sx={{ minWidth: 160 }}
-              >
-                <MenuItem value="prevista">{ENTRY_STATUS_LABEL.prevista}</MenuItem>
-                <MenuItem value="realizada">{ENTRY_STATUS_LABEL.realizada}</MenuItem>
-              </TextField>
+                onChange={(v) => setInvoiceStatus(v as 'prevista' | 'realizada')}
+                options={SETTLEABLE_STATUS_OPTIONS}
+                disableClearable
+              />
             </Box>
 
             {items.length === 0 ? (

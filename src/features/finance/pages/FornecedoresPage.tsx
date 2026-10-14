@@ -10,7 +10,6 @@ import {
   FormControlLabel,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -44,12 +43,15 @@ import {
   SUPPLIER_BILLING_OPTIONS,
   SUPPLIER_CATEGORY_LABEL,
   SUPPLIER_CATEGORY_OPTIONS,
+  BANK_ACCOUNT_TYPE_OPTIONS,
 } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { ACTIVE_FILTER_OPTIONS } from '@/components/fields/options'
 
 type FormValues = SupplierInput
 
@@ -180,35 +182,27 @@ function SupplierFormDialog({
             control={control}
             rules={{ required: true }}
             render={({ field }) => (
-              <TextField {...field} select label="Categoria" fullWidth required>
-                {SUPPLIER_CATEGORY_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <AutocompleteField
+                label="Categoria"
+                required
+                value={field.value}
+                onChange={field.onChange}
+                options={SUPPLIER_CATEGORY_OPTIONS}
+                disableClearable
+              />
             )}
           />
           <Controller
             name="default_billing_type"
             control={control}
             render={({ field }) => (
-              <TextField
-                {...field}
-                value={field.value ?? ''}
-                select
+              <AutocompleteField
                 label="Forma de cobrança padrão"
-                fullWidth
-              >
-                <MenuItem value="">
-                  <em>Nenhuma</em>
-                </MenuItem>
-                {SUPPLIER_BILLING_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                emptyLabel="Nenhuma"
+                value={field.value ?? ''}
+                onChange={field.onChange}
+                options={SUPPLIER_BILLING_OPTIONS}
+              />
             )}
           />
 
@@ -291,16 +285,15 @@ function SupplierFormDialog({
                 name="bank_account_type"
                 control={control}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    value={field.value ?? ''}
-                    select
+                  <AutocompleteField
                     label="Tipo"
+                    fullWidth={false}
                     sx={{ minWidth: 140 }}
-                  >
-                    <MenuItem value="corrente">Corrente</MenuItem>
-                    <MenuItem value="poupanca">Poupança</MenuItem>
-                  </TextField>
+                    value={field.value ?? ''}
+                    onChange={field.onChange}
+                    options={BANK_ACCOUNT_TYPE_OPTIONS}
+                    disableClearable
+                  />
                 )}
               />
             </Stack>
@@ -429,43 +422,32 @@ export default function FornecedoresPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={category}
-            onChange={(e) => {
-              setCategory(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Categoria"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 220 } }}
-          >
-            <MenuItem value="">
-              <em>Todas</em>
-            </MenuItem>
-            {SUPPLIER_CATEGORY_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
+            emptyLabel="Todas"
+            value={category}
+            onChange={(v) => {
+              setCategory(v)
               setPage(0)
             }}
+            options={SUPPLIER_CATEGORY_OPTIONS}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 180 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            <MenuItem value="true">Ativos</MenuItem>
-            <MenuItem value="false">Inativos</MenuItem>
-          </TextField>
+            emptyLabel="Todos"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ACTIVE_FILTER_OPTIONS}
+          />
         </Stack>
       </Card>
 

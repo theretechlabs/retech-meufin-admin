@@ -9,7 +9,6 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -48,6 +47,7 @@ import {
   warrantyProgressPct,
 } from '../constants'
 import { WarrantyDocumentsDialog } from '../components/WarrantyDocumentsDialog'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { WarrantyFormDialog } from '../components/WarrantyFormDialog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -253,34 +253,27 @@ export default function WarrantiesPage() {
                 ),
               }}
             />
-            <TextField
-              select
+            <AutocompleteField
               label="Categoria"
+              emptyLabel="Todas"
               value={category}
-              onChange={(e) => setCategory(e.target.value)}
+              onChange={setCategory}
+              options={CATEGORY_OPTIONS.map((o) => ({
+                value: o.value,
+                label: `${CATEGORY_ICON[o.value]} ${o.label}`,
+              }))}
+              fullWidth={false}
               sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">Todas</MenuItem>
-              {CATEGORY_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {CATEGORY_ICON[o.value]} {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+            />
+            <AutocompleteField
               label="Situação"
+              emptyLabel="Todas"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
+              onChange={setStatus}
+              options={STATUS_OPTIONS}
+              fullWidth={false}
               sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">Todas</MenuItem>
-              {STATUS_OPTIONS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
+            />
           </Stack>
         </CardContent>
       </Card>

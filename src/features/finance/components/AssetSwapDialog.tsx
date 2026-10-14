@@ -10,7 +10,6 @@ import {
   DialogTitle,
   Divider,
   FormControlLabel,
-  MenuItem,
   Paper,
   Stack,
   Step,
@@ -351,19 +350,15 @@ export function AssetSwapDialog({
                   </Box>
                   {payer === 'proprio' && (
                     <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
-                      <TextField
-                        select
+                      <AutocompleteField
                         label="Forma de pagamento"
-                        value={payoffMethod}
-                        onChange={(e) => setPayoffMethod(e.target.value as PaymentMethod)}
+                        fullWidth={false}
                         sx={{ minWidth: 200, flex: 1 }}
-                      >
-                        {PAYMENT_METHOD_OPTIONS.map((o) => (
-                          <MenuItem key={o.value} value={o.value}>
-                            {o.label}
-                          </MenuItem>
-                        ))}
-                      </TextField>
+                        value={payoffMethod}
+                        onChange={(v) => setPayoffMethod(v as PaymentMethod)}
+                        options={PAYMENT_METHOD_OPTIONS}
+                        disableClearable
+                      />
                       {payoffNeedsAccount && (
                         <Box sx={{ minWidth: 200, flex: 1 }}>
                           <AutocompleteField
@@ -440,19 +435,15 @@ export function AssetSwapDialog({
               />
               {cashCents > 0 && (
                 <>
-                  <TextField
-                    select
+                  <AutocompleteField
                     label="Forma de pagamento"
-                    value={cashMethod}
-                    onChange={(e) => setCashMethod(e.target.value as PaymentMethod)}
+                    fullWidth={false}
                     sx={{ minWidth: 180, flex: 1 }}
-                  >
-                    {PAYMENT_METHOD_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                    value={cashMethod}
+                    onChange={(v) => setCashMethod(v as PaymentMethod)}
+                    options={PAYMENT_METHOD_OPTIONS}
+                    disableClearable
+                  />
                   {cashNeedsAccount && (
                     <Box sx={{ minWidth: 200, flex: 1 }}>
                       <AutocompleteField

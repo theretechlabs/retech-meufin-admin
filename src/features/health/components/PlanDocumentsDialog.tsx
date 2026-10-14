@@ -8,7 +8,6 @@ import {
   DialogTitle,
   Divider,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -42,6 +41,7 @@ import {
 } from '../constants'
 import { ConfirmDialog } from './ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from './StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 type FormValues = {
   doc_type: PlanDocType
@@ -148,13 +148,14 @@ export function PlanDocumentsDialog({
                 control={control}
                 rules={{ required: true }}
                 render={({ field }) => (
-                  <TextField {...field} select label="Tipo de documento" fullWidth required>
-                    {PLAN_DOC_TYPE_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>
-                        {o.label}
-                      </MenuItem>
-                    ))}
-                  </TextField>
+                  <AutocompleteField
+                    label="Tipo de documento"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={PLAN_DOC_TYPE_OPTIONS}
+                    required
+                    disableClearable
+                  />
                 )}
               />
               {docType === 'outro' && (

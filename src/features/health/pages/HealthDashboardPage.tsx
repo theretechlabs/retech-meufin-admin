@@ -4,16 +4,13 @@ import {
   AccordionDetails,
   AccordionSummary,
   alpha,
-  Autocomplete,
   Box,
   Button,
   Card,
   CardContent,
   Grid,
   IconButton,
-  MenuItem,
   Stack,
-  TextField,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -43,6 +40,8 @@ import {
 import { ShareLinkDialog } from '../components/ShareLinkDialog'
 import { PageHeader } from '../components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { MultiAutocompleteField } from '@/components/fields/MultiAutocompleteField'
 
 // ---------------------------------------------------------------------------
 // Cards de contagem (mantidos da v1)
@@ -220,23 +219,16 @@ export default function HealthDashboardPage() {
             justifyContent="flex-end"
             alignItems={{ xs: 'stretch', sm: 'center' }}
           >
-            <TextField
-              select
-              size="small"
+            <AutocompleteField
               label="Membro"
-              value={familyMemberId}
-              onChange={(e) => setFamilyMemberId(e.target.value)}
+              size="small"
+              fullWidth={false}
               sx={{ minWidth: 200 }}
-            >
-              <MenuItem value="">
-                <em>Todos</em>
-              </MenuItem>
-              {members.map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.full_name}
-                </MenuItem>
-              ))}
-            </TextField>
+              emptyLabel="Todos"
+              value={familyMemberId}
+              onChange={setFamilyMemberId}
+              options={members.map((m) => ({ value: m.id, label: m.full_name }))}
+            />
             <ToggleButtonGroup
               size="small"
               exclusive
@@ -352,20 +344,13 @@ export default function HealthDashboardPage() {
                           alignItems={{ xs: 'stretch', sm: 'center' }}
                           sx={{ mt: 2 }}
                         >
-                          <Autocomplete
-                            multiple
+                          <MultiAutocompleteField
+                            label="Ver marcadores sem resultado…"
                             size="small"
-                            options={panel.missing}
-                            getOptionLabel={(m) => m.canonical_name}
-                            value={peeked}
-                            onChange={(_, v) =>
-                              setPeek((prev) => ({ ...prev, [panel.category]: v.map((m) => m.id) }))
-                            }
-                            isOptionEqualToValue={(a, b) => a.id === b.id}
                             sx={{ minWidth: 280 }}
-                            renderInput={(params) => (
-                              <TextField {...params} label="Ver marcadores sem resultado…" />
-                            )}
+                            options={panel.missing.map((m) => ({ value: m.id, label: m.canonical_name }))}
+                            value={peek[panel.category] ?? []}
+                            onChange={(ids) => setPeek((prev) => ({ ...prev, [panel.category]: ids }))}
                           />
                           <Typography variant="caption" color="text.secondary">
                             {panel.missing.length} marcador(es) deste painel nunca tiveram resultado.

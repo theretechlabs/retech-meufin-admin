@@ -7,7 +7,6 @@ import {
   Divider,
   Grid,
   InputAdornment,
-  MenuItem,
   Table,
   TableBody,
   TableCell,
@@ -32,6 +31,7 @@ import {
 } from '@/features/health/components/StateViews'
 import { ImportFiscalDialog } from '../components/ImportFiscalDialog'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 const EXTRACTION_LABEL: Record<string, string> = {
   pending: 'Aguardando leitura',
@@ -132,44 +132,30 @@ export default function CuponsPage() {
               />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Leitura"
-                fullWidth
                 size="small"
+                emptyLabel="Todas"
                 value={status}
-                onChange={(e) => {
-                  setStatus(e.target.value)
+                onChange={(v) => {
+                  setStatus(v)
                   setPage(0)
                 }}
-              >
-                <MenuItem value="">Todas</MenuItem>
-                {STATUS_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                options={STATUS_OPTIONS}
+              />
             </Grid>
             <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
-              <TextField
-                select
+              <AutocompleteField
                 label="Vínculo"
-                fullWidth
                 size="small"
+                emptyLabel="Todos"
                 value={linked}
-                onChange={(e) => {
-                  setLinked(e.target.value)
+                onChange={(v) => {
+                  setLinked(v)
                   setPage(0)
                 }}
-              >
-                <MenuItem value="">Todos</MenuItem>
-                {LINK_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                options={LINK_OPTIONS}
+              />
             </Grid>
           </Grid>
         </CardContent>

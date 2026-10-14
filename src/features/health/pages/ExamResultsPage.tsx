@@ -11,7 +11,6 @@ import {
   Divider,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -43,6 +42,7 @@ import {
 } from '../api'
 import { EXAM_RESULT_STATUS, EXAM_SOURCE_TYPES, errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -159,36 +159,21 @@ function ResultFormDialog({ open, onClose }: { open: boolean; onClose: () => voi
           {mutation.isError && <ErrorState message={errorMessage(mutation.error)} />}
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <TextField
-              select
+            <AutocompleteField
               label="Membro da família"
               value={familyMemberId}
-              onChange={(e) => setFamilyMemberId(e.target.value)}
-              fullWidth
+              onChange={setFamilyMemberId}
+              options={(members ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
               required
-            >
-              {(members ?? []).map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.full_name}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              disableClearable
+            />
+            <AutocompleteField
               label="Laboratório"
+              emptyLabel="Nenhum"
               value={labId}
-              onChange={(e) => setLabId(e.target.value)}
-              fullWidth
-            >
-              <MenuItem value="">
-                <em>Nenhum</em>
-              </MenuItem>
-              {(labs ?? []).map((l) => (
-                <MenuItem key={l.id} value={l.id}>
-                  {l.name}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setLabId}
+              options={(labs ?? []).map((l) => ({ value: l.id, label: l.name }))}
+            />
           </Stack>
 
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -201,32 +186,20 @@ function ResultFormDialog({ open, onClose }: { open: boolean; onClose: () => voi
               required
               InputLabelProps={{ shrink: true }}
             />
-            <TextField
-              select
+            <AutocompleteField
               label="Origem"
               value={sourceType}
-              onChange={(e) => setSourceType(e.target.value)}
-              fullWidth
-            >
-              {EXAM_SOURCE_TYPES.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
-            <TextField
-              select
+              onChange={setSourceType}
+              options={EXAM_SOURCE_TYPES}
+              disableClearable
+            />
+            <AutocompleteField
               label="Status"
               value={status}
-              onChange={(e) => setStatus(e.target.value)}
-              fullWidth
-            >
-              {EXAM_RESULT_STATUS.map((o) => (
-                <MenuItem key={o.value} value={o.value}>
-                  {o.label}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setStatus}
+              options={EXAM_RESULT_STATUS}
+              disableClearable
+            />
           </Stack>
 
           <TextField
@@ -436,46 +409,32 @@ export default function ExamResultsPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={memberId}
-            onChange={(e) => {
-              setMemberId(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Membro"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {(members ?? []).map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                {m.full_name}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
+            emptyLabel="Todos"
+            value={memberId}
+            onChange={(v) => {
+              setMemberId(v)
               setPage(0)
             }}
+            options={(members ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 200 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {EXAM_RESULT_STATUS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todos"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={EXAM_RESULT_STATUS}
+          />
         </Stack>
       </Card>
 

@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Card,
@@ -17,7 +16,6 @@ import {
   IconButton,
   InputAdornment,
   LinearProgress,
-  MenuItem,
   Stack,
   Switch,
   Tab,
@@ -68,12 +66,10 @@ import {
   listMaintenance,
   listSchedules,
   listVehiclePlans,
-  searchCatalog,
   updateMaintenance,
   updateOdometer,
   updateSchedule,
   updateVehiclePlan,
-  type MaintenanceCatalogItem,
   type Maintenance,
   type MaintenanceInput,
   type MaintenanceItem,
@@ -87,6 +83,7 @@ import {
 import {
   ALERT_STATUS_COLOR,
   ALERT_STATUS_LABEL,
+  ANALYTICS_PERIOD_OPTIONS,
   errorMessage,
   formatDate,
   formatKM,
@@ -98,6 +95,7 @@ import {
   MAINTENANCE_TYPE_OPTIONS,
   OS_ITEM_CATEGORY_LABEL,
   OS_ITEM_CATEGORY_OPTIONS,
+  OS_ITEM_TYPE_OPTIONS,
   PAYMENT_METHOD_OPTIONS,
   SCHEDULE_ALERT_STATUS_COLOR,
   SCHEDULE_ALERT_STATUS_LABEL,
@@ -105,9 +103,14 @@ import {
   VEHICLE_STATUS_COLOR,
   VEHICLE_STATUS_LABEL,
 } from '../constants'
-import { listSuppliers, type Supplier } from '@/features/finance/api'
+import { getSupplier, listSuppliers, listSuppliersPaged } from '@/features/finance/api'
+import { financeKeys } from '@/features/finance/constants'
 import { AssetSwapDialog } from '@/features/finance/components/AssetSwapDialog'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { AsyncAutocompleteField } from '@/components/fields/AsyncAutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 import { VehicleFinanceTab } from '../components/VehicleFinanceTab'
+import { CatalogItemField } from '../components/CatalogItemField'
 import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { ErrorState, LoadingState, EmptyState } from '@/features/health/components/StateViews'
@@ -206,78 +209,16 @@ const emptyItemRow: MaintenanceItemFormRow = {
   notes: '',
 }
 
-function CatalogAutocomplete({
-  defaultValue,
-  onSelect,
-  onType,
-}: {
-  defaultValue: string
-  onSelect: (item: MaintenanceCatalogItem) => void
-  onType: (text: string) => void
-}) {
-  const [inputVal, setInputVal] = useState(defaultValue)
-  const [open, setOpen] = useState(false)
+/** Busca paginada de fornecedores ativos para o campo "Fornecedor / Oficina". */
+async function searchSuppliers(query: string) {
+  const { items } = await listSuppliersPaged({ query, limit: 20, offset: 0, active: true })
+  return items.map((s) => ({ value: s.id, label: s.name }))
+}
 
-  const { data: opts = [] } = useQuery({
-    queryKey: vehicleKeys.catalog(inputVal, ''),
-    queryFn: () => searchCatalog(inputVal, '', 30),
-    enabled: open && inputVal.length >= 1,
-    staleTime: 60_000,
-    placeholderData: (prev: MaintenanceCatalogItem[] | undefined) => prev ?? [],
-  })
-
-  return (
-    <Autocomplete
-      freeSolo
-      open={open}
-      onOpen={() => setOpen(true)}
-      onClose={() => setOpen(false)}
-      options={opts}
-      getOptionLabel={(o) => (typeof o === 'string' ? o : o.name)}
-      groupBy={(o) =>
-        typeof o === 'string' ? '' : (OS_ITEM_CATEGORY_LABEL[o.category as OSItemCategory] ?? o.category)
-      }
-      filterOptions={(x) => x}
-      noOptionsText={inputVal.length < 1 ? 'Digite para buscar' : 'Nenhum item encontrado'}
-      inputValue={inputVal}
-      onInputChange={(_, v, reason) => {
-        setInputVal(v)
-        if (reason === 'input') onType(v)
-      }}
-      onChange={(_, v) => {
-        if (v && typeof v !== 'string') {
-          setInputVal(v.name)
-          onSelect(v)
-        } else if (v === null) {
-          setInputVal('')
-          onType('')
-        }
-      }}
-      renderOption={(props, o) => {
-        const item = o as MaintenanceCatalogItem
-        return (
-          <Box component="li" {...props} key={item.id}>
-            <Stack>
-              <Typography variant="body2" fontWeight={500}>{item.name}</Typography>
-              {item.description && (
-                <Typography variant="caption" color="text.secondary">{item.description}</Typography>
-              )}
-            </Stack>
-          </Box>
-        )
-      }}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          size="small"
-          label="Item / Serviço *"
-          required
-          placeholder="Buscar no catálogo..."
-          helperText="Selecione do catálogo ou descreva livremente"
-        />
-      )}
-    />
-  )
+/** Rótulo do fornecedor já salvo na OS (pode estar inativo; o GET por id resolve). */
+async function resolveSupplier(id: string) {
+  const s = await getSupplier(id)
+  return { value: s.id, label: s.name }
 }
 
 type MaintenanceFormValues = {
@@ -352,20 +293,8 @@ function MaintenanceFormDialog({
       : emptyMaintenanceForm,
   })
 
-  const { data: suppliers = [] } = useQuery({
-    queryKey: ['suppliers'],
-    queryFn: listSuppliers,
-  })
-
-  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(null)
-
-  useEffect(() => {
-    if (item?.supplier_id && suppliers.length > 0) {
-      setSelectedSupplier(suppliers.find((s) => s.id === item.supplier_id) ?? null)
-    } else if (!item) {
-      setSelectedSupplier(null)
-    }
-  }, [item, suppliers])
+  // O diálogo é montado a cada abertura, então `item` não muda durante a vida dele.
+  const [supplierId, setSupplierId] = useState(item?.supplier_id ?? '')
 
   const mutation = useMutation({
     mutationFn: (values: MaintenanceFormValues) => {
@@ -387,7 +316,7 @@ function MaintenanceFormDialog({
         title: values.title.trim(),
         service_date: values.service_date || null,
         odometer_at_service: values.odometer_at_service ? parseInt(values.odometer_at_service) : null,
-        supplier_id: selectedSupplier?.id ?? null,
+        supplier_id: supplierId || null,
         os_number: values.os_number || null,
         technician: values.technician || null,
         payment_method: values.payment_method || null,
@@ -401,7 +330,7 @@ function MaintenanceFormDialog({
       qc.invalidateQueries({ queryKey: vehicleKeys.maintenance(vehicleId) })
       qc.invalidateQueries({ queryKey: vehicleKeys.alerts(vehicleId) })
       reset(emptyMaintenanceForm)
-      setSelectedSupplier(null)
+      setSupplierId('')
       onClose()
     },
   })
@@ -428,11 +357,13 @@ function MaintenanceFormDialog({
                 name="status"
                 control={control}
                 render={({ field }) => (
-                  <TextField {...field} select label="Status" fullWidth>
-                    {MAINTENANCE_STATUS_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                    ))}
-                  </TextField>
+                  <AutocompleteField
+                    label="Status"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={MAINTENANCE_STATUS_OPTIONS}
+                    disableClearable
+                  />
                 )}
               />
             </Grid>
@@ -442,19 +373,16 @@ function MaintenanceFormDialog({
                 control={control}
                 rules={{ required: 'Informe o tipo' }}
                 render={({ field }) => (
-                  <TextField
-                    {...field}
-                    select
+                  <AutocompleteField
                     label="Tipo"
-                    fullWidth
                     required
                     error={Boolean(errors.type)}
                     helperText={errors.type?.message}
-                  >
-                    {MAINTENANCE_TYPE_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                    ))}
-                  </TextField>
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={MAINTENANCE_TYPE_OPTIONS}
+                    disableClearable
+                  />
                 )}
               />
             </Grid>
@@ -530,25 +458,24 @@ function MaintenanceFormDialog({
                 name="payment_method"
                 control={control}
                 render={({ field }) => (
-                  <TextField {...field} select label="Forma de pagamento" fullWidth>
-                    <MenuItem value="">—</MenuItem>
-                    {PAYMENT_METHOD_OPTIONS.map((o) => (
-                      <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                    ))}
-                  </TextField>
+                  <AutocompleteField
+                    label="Forma de pagamento"
+                    emptyLabel="—"
+                    value={field.value}
+                    onChange={field.onChange}
+                    options={PAYMENT_METHOD_OPTIONS}
+                  />
                 )}
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <Autocomplete
-                options={suppliers}
-                getOptionLabel={(s) => s.name}
-                value={selectedSupplier}
-                onChange={(_, v) => setSelectedSupplier(v)}
-                isOptionEqualToValue={(a, b) => a.id === b.id}
-                renderInput={(params) => (
-                  <TextField {...params} label="Fornecedor / Oficina" fullWidth />
-                )}
+              <AsyncAutocompleteField
+                label="Fornecedor / Oficina"
+                value={supplierId}
+                onChange={(v) => setSupplierId(v)}
+                queryKey={financeKeys.suppliers()}
+                search={searchSuppliers}
+                resolve={resolveSupplier}
               />
             </Grid>
             <Grid size={{ xs: 12 }}>
@@ -575,7 +502,7 @@ function MaintenanceFormDialog({
               <Stack spacing={1.5}>
                 <Box sx={{ display: 'flex', gap: 1, alignItems: 'flex-start' }}>
                   <Box sx={{ flex: 1 }}>
-                    <CatalogAutocomplete
+                    <CatalogItemField
                       defaultValue={row.description}
                       onSelect={(catItem) =>
                         setItemRows((p) =>
@@ -623,35 +550,34 @@ function MaintenanceFormDialog({
 
                 <Grid container spacing={1.5}>
                   <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField
-                      select fullWidth size="small" label="Tipo"
+                    <AutocompleteField
+                      label="Tipo"
+                      size="small"
                       value={row.item_type}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setItemRows((p) =>
                           p.map((r, i) =>
-                            i === idx ? { ...r, item_type: e.target.value as 'product' | 'service' } : r,
+                            i === idx ? { ...r, item_type: v as 'product' | 'service' } : r,
                           ),
                         )
                       }
-                    >
-                      <MenuItem value="product">Peça / Produto</MenuItem>
-                      <MenuItem value="service">Serviço</MenuItem>
-                    </TextField>
+                      options={OS_ITEM_TYPE_OPTIONS}
+                      disableClearable
+                    />
                   </Grid>
                   <Grid size={{ xs: 6, sm: 3 }}>
-                    <TextField
-                      select fullWidth size="small" label="Categoria"
+                    <AutocompleteField
+                      label="Categoria"
+                      size="small"
                       value={row.category}
-                      onChange={(e) =>
+                      onChange={(v) =>
                         setItemRows((p) =>
-                          p.map((r, i) => i === idx ? { ...r, category: e.target.value } : r)
+                          p.map((r, i) => i === idx ? { ...r, category: v } : r)
                         )
                       }
-                    >
-                      {OS_ITEM_CATEGORY_OPTIONS.map((o) => (
-                        <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-                      ))}
-                    </TextField>
+                      options={OS_ITEM_CATEGORY_OPTIONS}
+                      disableClearable
+                    />
                   </Grid>
                   <Grid size={{ xs: 4, sm: 2 }}>
                     <TextField
@@ -1380,7 +1306,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
   const { show } = useToast()
   const [formOpen, setFormOpen] = useState(false)
   const [toDelete, setToDelete] = useState<MaintenanceSchedule | null>(null)
-  const [linkedMaintenance, setLinkedMaintenance] = useState<Maintenance | null>(null)
+  const [linkedMaintenanceId, setLinkedMaintenanceId] = useState('')
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: vehicleKeys.schedules(vehicleId),
@@ -1421,7 +1347,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
   const [newSched, setNewSched] = useState({ description: '', scheduled_km: '', scheduled_date: '', notes: '' })
   const createMutation = useMutation({
     mutationFn: () => createSchedule(vehicleId, {
-      maintenance_id: linkedMaintenance?.id ?? null,
+      maintenance_id: linkedMaintenanceId || null,
       description: newSched.description,
       scheduled_km: newSched.scheduled_km ? parseInt(newSched.scheduled_km) : null,
       scheduled_date: newSched.scheduled_date || null,
@@ -1431,7 +1357,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
       qc.invalidateQueries({ queryKey: vehicleKeys.schedules(vehicleId) })
       show('Agendamento criado.')
       setNewSched({ description: '', scheduled_km: '', scheduled_date: '', notes: '' })
-      setLinkedMaintenance(null)
+      setLinkedMaintenanceId('')
       setFormOpen(false)
     },
   })
@@ -1528,18 +1454,19 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
         <DialogContent>
           <Stack spacing={2.5} sx={{ mt: 1 }}>
             {createMutation.isError && <ErrorState message={errorMessage(createMutation.error)} />}
-            <Autocomplete
-              options={maintenances}
-              getOptionLabel={(m) => `${m.title}${m.service_date ? ` — ${formatDate(m.service_date)}` : ` (${MAINTENANCE_STATUS_LABEL[m.status]})`}`}
-              value={linkedMaintenance}
-              onChange={(_, v) => {
-                setLinkedMaintenance(v)
-                if (v) setNewSched((p) => ({ ...p, description: v.title }))
+            <AutocompleteField
+              label="Manutenção vinculada"
+              helperText="Opcional — vincule a uma manutenção já registrada"
+              value={linkedMaintenanceId}
+              onChange={(v) => {
+                setLinkedMaintenanceId(v)
+                const m = maintenances.find((it) => it.id === v)
+                if (m) setNewSched((p) => ({ ...p, description: m.title }))
               }}
-              isOptionEqualToValue={(a, b) => a.id === b.id}
-              renderInput={(params) => (
-                <TextField {...params} label="Manutenção vinculada" helperText="Opcional — vincule a uma manutenção já registrada" />
-              )}
+              options={maintenances.map((m) => ({
+                value: m.id,
+                label: `${m.title}${m.service_date ? ` — ${formatDate(m.service_date)}` : ` (${MAINTENANCE_STATUS_LABEL[m.status]})`}`,
+              }))}
             />
             <TextField
               label="Descrição" fullWidth required
@@ -1606,16 +1533,16 @@ function AnalyticsTab({ vehicleId }: { vehicleId: string }) {
   return (
     <Stack spacing={3}>
       <Stack direction="row" justifyContent="flex-end">
-        <TextField
-          select size="small" label="Período" value={months}
-          onChange={(e) => setMonths(Number(e.target.value))}
+        <AutocompleteField
+          label="Período"
+          size="small"
+          fullWidth={false}
           sx={{ width: 160 }}
-        >
-          <MenuItem value={3}>3 meses</MenuItem>
-          <MenuItem value={6}>6 meses</MenuItem>
-          <MenuItem value={12}>12 meses</MenuItem>
-          <MenuItem value={24}>24 meses</MenuItem>
-        </TextField>
+          value={String(months)}
+          onChange={(v) => setMonths(Number(v))}
+          options={numericOptions(ANALYTICS_PERIOD_OPTIONS)}
+          disableClearable
+        />
       </Stack>
 
       <Grid container spacing={2}>

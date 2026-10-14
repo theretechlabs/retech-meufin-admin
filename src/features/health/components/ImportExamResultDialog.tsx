@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
   Alert,
-  Autocomplete,
   Box,
   Button,
   Checkbox,
@@ -13,7 +12,6 @@ import {
   Divider,
   FormControlLabel,
   IconButton,
-  MenuItem,
   Step,
   StepLabel,
   Stepper,
@@ -29,6 +27,9 @@ import {
   Typography,
 } from '@mui/material'
 import { AttachFileButton } from '@/components/common/AttachFileButton'
+import { AsyncAutocompleteField } from '@/components/fields/AsyncAutocompleteField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import type { AutocompleteOption } from '@/components/fields/options'
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined'
 import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
@@ -38,7 +39,6 @@ import {
   getDocumentExtractionStatus,
   listFamilyMembers,
   listLabs,
-  listMarkers,
   uploadDocument,
   type ConfirmExamItem,
   type ExamItemSuggestion,
@@ -46,6 +46,7 @@ import {
   type RefTier,
 } from '../api'
 import { errorMessage, healthKeys } from '../constants'
+import { markerOption, searchMarkers } from '../markerOptions'
 import { LoadingState } from './StateViews'
 import { resultNumber, TierFit } from './TierFit'
 
@@ -81,7 +82,7 @@ type ReviewItem = {
   markerMode: 'matched' | 'new'
   markerId: string | null
   markerName: string // nome exibido/editável (novo marcador)
-  candidates: { id: string; label: string }[]
+  candidates: AutocompleteOption[]
   resultValue: string
   unit: string
   refMin: string
@@ -103,12 +104,9 @@ function suggestionToReview(s: ExamItemSuggestion): ReviewItem {
     markerMode: matched ? 'matched' : 'new',
     markerId: matched ? (s.marker_id as string) : null,
     markerName: matched ? (s.marker_name ?? s.raw_name) : s.raw_name,
-    candidates: (s.candidates ?? []).map((c) => ({
-      id: c.marker_id,
-      label: c.canonical_unit
-        ? `${c.canonical_name} (${c.canonical_unit})`
-        : c.canonical_name,
-    })),
+    candidates: (s.candidates ?? []).map((c) =>
+      markerOption({ id: c.marker_id, canonical_name: c.canonical_name, canonical_unit: c.canonical_unit }),
+    ),
     resultValue: s.result_value ?? '',
     unit: s.unit ?? '',
     refMin: numToText(s.reference_min),
@@ -122,62 +120,34 @@ function suggestionToReview(s: ExamItemSuggestion): ReviewItem {
   }
 }
 
-type MarkerOption = { id: string; label: string }
-
 /**
  * Busca de marcador no catálogo para itens sem match: mostra os candidatos
- * fuzzy quando vazio e busca no servidor conforme o usuário digita — antes só
- * dava para aceitar o "mais próximo" ou criar marcador novo.
+ * fuzzy quando vazio e busca no servidor a partir de 2 caracteres — antes só
+ * dava para aceitar o "mais próximo" ou criar marcador novo. Ao escolher, a
+ * linha vira "matched" e este campo sai de cena; por isso nunca tem valor.
  */
 function MarkerSearchField({
   candidates,
   onSelect,
 }: {
-  candidates: MarkerOption[]
-  onSelect: (opt: MarkerOption) => void
+  candidates: AutocompleteOption[]
+  onSelect: (opt: AutocompleteOption) => void
 }) {
-  const [input, setInput] = useState('')
-  const query = input.trim()
-  const { data, isFetching } = useQuery({
-    queryKey: healthKeys.markers({ query, ctx: 'exam-import' }),
-    queryFn: () => listMarkers({ query, limit: 10 }),
-    enabled: query.length >= 2,
-    staleTime: 30_000,
-  })
-
-  const options = useMemo<MarkerOption[]>(() => {
-    const fromSearch = (data?.items ?? []).map((m) => ({
-      id: m.id,
-      label: m.canonical_unit ? `${m.canonical_name} (${m.canonical_unit})` : m.canonical_name,
-    }))
-    const seen = new Set(fromSearch.map((o) => o.id))
-    return [...fromSearch, ...candidates.filter((c) => !seen.has(c.id))]
-  }, [data, candidates])
-
   return (
-    <Autocomplete
+    <AsyncAutocompleteField
+      label="Buscar no catálogo"
       size="small"
-      options={options}
-      // Filtragem é do servidor; filtrar de novo no cliente esconderia
-      // resultados cujo alias casa mas o nome canônico não.
-      filterOptions={(x) => x}
-      value={null}
-      inputValue={input}
-      onInputChange={(_, v) => setInput(v)}
+      value=""
+      placeholder={candidates.length > 0 ? 'ou escolha um parecido…' : undefined}
+      queryKey={healthKeys.markers({ ctx: 'exam-import', candidates: candidates.map((c) => c.value) })}
+      search={async (query, signal) => {
+        const fromSearch = query.length >= 2 ? (await searchMarkers(query, signal)).map(markerOption) : []
+        const seen = new Set(fromSearch.map((o) => o.value))
+        return [...fromSearch, ...candidates.filter((c) => !seen.has(c.value))]
+      }}
       onChange={(_, opt) => {
         if (opt) onSelect(opt)
       }}
-      loading={isFetching}
-      isOptionEqualToValue={(a, b) => a.id === b.id}
-      noOptionsText={query.length < 2 ? 'Digite para buscar no catálogo' : 'Nada encontrado'}
-      sx={{ maxWidth: 320 }}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          variant="standard"
-          placeholder={candidates.length > 0 ? 'Buscar no catálogo (ou escolha um parecido)…' : 'Buscar no catálogo…'}
-        />
-      )}
     />
   )
 }
@@ -385,19 +355,13 @@ export function ImportExamResultDialog({
             {uploadMutation.isError && (
               <Alert severity="error">{errorMessage(uploadMutation.error)}</Alert>
             )}
-            <TextField
-              select
+            <AutocompleteField
               label="Membro da família"
-              fullWidth
               value={memberId}
-              onChange={(e) => setMemberId(e.target.value)}
-            >
-              {members.map((m) => (
-                <MenuItem key={m.id} value={m.id}>
-                  {m.full_name}
-                </MenuItem>
-              ))}
-            </TextField>
+              onChange={setMemberId}
+              options={members.map((m) => ({ value: m.id, label: m.full_name }))}
+              disableClearable
+            />
 
             <AttachFileButton
               label={file ? file.name : 'Selecionar PDF ou imagem'}
@@ -486,21 +450,16 @@ export function ImportExamResultDialog({
 
             <Box sx={{ display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center' }}>
               {!createLab ? (
-                <TextField
-                  select
+                <AutocompleteField
                   label="Laboratório"
-                  value={labId}
-                  onChange={(e) => setLabId(e.target.value)}
-                  sx={{ minWidth: 260 }}
                   size="small"
-                >
-                  <MenuItem value="">Sem laboratório</MenuItem>
-                  {labs.map((l) => (
-                    <MenuItem key={l.id} value={l.id}>
-                      {l.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  fullWidth={false}
+                  sx={{ minWidth: 260 }}
+                  emptyLabel="Sem laboratório"
+                  value={labId}
+                  onChange={setLabId}
+                  options={labs.map((l) => ({ value: l.id, label: l.name }))}
+                />
               ) : (
                 <TextField
                   label="Novo laboratório"
@@ -592,7 +551,7 @@ export function ImportExamResultDialog({
                                 onSelect={(c) =>
                                   setItem(idx, {
                                     markerMode: 'matched',
-                                    markerId: c.id,
+                                    markerId: c.value,
                                     markerName: c.label,
                                   })
                                 }

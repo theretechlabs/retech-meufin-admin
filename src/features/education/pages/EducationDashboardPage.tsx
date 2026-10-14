@@ -7,14 +7,12 @@ import {
   CardContent,
   Grid,
   Link,
-  MenuItem,
   Stack,
   Table,
   TableBody,
   TableCell,
   TableHead,
   TableRow,
-  TextField,
   Typography,
   alpha,
   useTheme,
@@ -38,8 +36,9 @@ import {
 } from 'recharts'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
-import { getEducationDashboard, listEnrollments, type ItemCategory } from '../api'
+import { getEducationDashboard, type ItemCategory } from '../api'
 import {
+  CURRENT_YEAR,
   educationKeys,
   errorMessage,
   formatCents,
@@ -48,8 +47,10 @@ import {
 } from '../constants'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
+import { useSchoolYears } from '../hooks/useSchoolYears'
 
-const CURRENT_YEAR = new Date().getFullYear()
 
 type SvgIconComponent = React.ElementType
 
@@ -114,17 +115,7 @@ export default function EducationDashboardPage() {
   const theme = useTheme()
   const navigate = useNavigate()
   const [year, setYear] = useState<number>(CURRENT_YEAR)
-
-  const enrollmentsQuery = useQuery({
-    queryKey: educationKeys.enrollments({}),
-    queryFn: () => listEnrollments(),
-  })
-
-  const years = useMemo(() => {
-    const set = new Set<number>([CURRENT_YEAR])
-    ;(enrollmentsQuery.data ?? []).forEach((e) => set.add(e.school_year))
-    return Array.from(set).sort((a, b) => b - a)
-  }, [enrollmentsQuery.data])
+  const years = useSchoolYears()
 
   const { data, isLoading, isError, error, refetch } = useQuery({
     queryKey: educationKeys.dashboard(year),
@@ -171,20 +162,16 @@ export default function EducationDashboardPage() {
       />
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <TextField
-          select
-          size="small"
+        <AutocompleteField
           label="Ano letivo"
-          value={year}
-          onChange={(e) => setYear(Number(e.target.value))}
+          size="small"
+          value={String(year)}
+          onChange={(v) => setYear(Number(v))}
+          options={numericOptions(years)}
+          disableClearable
+          fullWidth={false}
           sx={{ minWidth: 150 }}
-        >
-          {years.map((y) => (
-            <MenuItem key={y} value={y}>
-              {y}
-            </MenuItem>
-          ))}
-        </TextField>
+        />
       </Stack>
 
       {isLoading ? (

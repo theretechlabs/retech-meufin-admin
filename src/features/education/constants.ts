@@ -1,5 +1,8 @@
 import type { ItemCategory, ListStatus, Shift, Stage } from './api'
 
+/** Ano corrente no fuso local: padrão dos filtros e formulários de ano letivo. */
+export const CURRENT_YEAR = new Date().getFullYear()
+
 export const educationKeys = {
   all: ['education'] as const,
   dashboard: (year?: number) => [...educationKeys.all, 'dashboard', year ?? 'latest'] as const,

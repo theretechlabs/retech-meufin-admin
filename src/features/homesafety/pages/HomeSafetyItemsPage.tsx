@@ -16,7 +16,6 @@ import {
   ListItemButton,
   ListItemIcon,
   ListItemText,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -39,6 +38,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm } from 'react-hook-form'
 import { useSearchParams } from 'react-router-dom'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import {
   createHomeSafetyEvent,
   createHomeSafetyItem,
@@ -64,6 +64,7 @@ import {
   RISK_TYPE_LABEL,
   RISK_TYPE_OPTIONS,
   STATUS_COLOR,
+  STATUS_FILTER_OPTIONS,
   STATUS_LABEL,
   errorMessage,
   formatCents,
@@ -233,39 +234,41 @@ function ItemFormDialog({
               name="category"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Categoria" fullWidth>
-                  {CATEGORY_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Categoria"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={CATEGORY_OPTIONS}
+                  disableClearable
+                />
               )}
             />
             <Controller
               name="risk_type"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Tipo de risco" fullWidth>
-                  {RISK_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Tipo de risco"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={RISK_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
             <Controller
               name="priority"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Prioridade" sx={{ minWidth: 140 }}>
-                  {PRIORITY_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Prioridade"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={PRIORITY_OPTIONS}
+                  disableClearable
+                  fullWidth={false}
+                  sx={{ minWidth: 140 }}
+                />
               )}
             />
           </Stack>
@@ -571,13 +574,13 @@ function EventsDialog({ item, onClose }: { item: HomeSafetyItem; onClose: () => 
               name="event_type"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Tipo" fullWidth>
-                  {EVENT_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Tipo"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={EVENT_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
             <Controller
@@ -773,40 +776,26 @@ export default function HomeSafetyItemsPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={categoryFilter}
-            onChange={(e) => setParam('category', e.target.value)}
+          <AutocompleteField
             label="Categoria"
             size="small"
+            emptyLabel="Todas"
+            value={categoryFilter}
+            onChange={(v) => setParam('category', v)}
+            options={CATEGORY_OPTIONS}
+            fullWidth={false}
             sx={{ minWidth: { sm: 180 } }}
-          >
-            <MenuItem value="">
-              <em>Todas</em>
-            </MenuItem>
-            {CATEGORY_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={statusFilter}
-            onChange={(e) => setParam('status', e.target.value)}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            emptyLabel="Todos"
+            value={statusFilter}
+            onChange={(v) => setParam('status', v)}
+            options={STATUS_FILTER_OPTIONS}
+            fullWidth={false}
             sx={{ minWidth: { sm: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {(['vencido', 'atencao', 'proximo', 'ok', 'sem_controle'] as const).map((s) => (
-              <MenuItem key={s} value={s}>
-                {STATUS_LABEL[s]}
-              </MenuItem>
-            ))}
-          </TextField>
+          />
         </Stack>
       </Card>
 

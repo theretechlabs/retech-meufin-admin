@@ -11,7 +11,6 @@ import {
   Grid,
   IconButton,
   InputAdornment,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -57,6 +56,7 @@ import {
 import { errorMessage } from '../constants'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
 
 // Chaves de query locais (constants.ts é somente-leitura para esta feature).
 const fiscalKeys = {
@@ -424,20 +424,16 @@ export default function FiscalDashboardPage() {
                       }}
                       sx={{ minWidth: 220 }}
                     />
-                    <TextField
-                      select
-                      size="small"
+                    <AutocompleteField
                       label="Ordenar"
+                      size="small"
+                      fullWidth={false}
+                      sx={{ minWidth: 200 }}
                       value={sort}
-                      onChange={(e) => setSort(e.target.value as FiscalProductSort)}
-                      sx={{ minWidth: 170 }}
-                    >
-                      {SORT_OPTIONS.map((o) => (
-                        <MenuItem key={o.value} value={o.value}>
-                          {o.label}
-                        </MenuItem>
-                      ))}
-                    </TextField>
+                      onChange={(v) => setSort(v as FiscalProductSort)}
+                      options={SORT_OPTIONS}
+                      disableClearable
+                    />
                   </Stack>
                 </Stack>
 

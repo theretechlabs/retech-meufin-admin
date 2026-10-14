@@ -1,12 +1,13 @@
-import { useMemo, useState } from 'react'
-import { Autocomplete, CircularProgress, TextField } from '@mui/material'
-import { useQuery } from '@tanstack/react-query'
-import { listMarkers, type Marker } from '../api'
+import { useQueryClient } from '@tanstack/react-query'
+import { AsyncAutocompleteField } from '@/components/fields/AsyncAutocompleteField'
+import { getMarker, type Marker } from '../api'
 import { healthKeys } from '../constants'
+import { markerOption, searchMarkers } from '../markerOptions'
 
 /**
- * Busca de marcador no catálogo. Retorna o Marker selecionado (ou null).
- * Debounce simples via estado de input; a busca só dispara com 2+ chars.
+ * Busca de marcador no catálogo (servidor) que devolve o Marker completo —
+ * o chamador precisa da unidade canônica, não só do id. Os marcadores de cada
+ * página buscada entram no cache por id; um id fora dele busca o registro.
  */
 export function MarkerAutocomplete({
   value,
@@ -19,49 +20,34 @@ export function MarkerAutocomplete({
   label?: string
   size?: 'small' | 'medium'
 }) {
-  const [input, setInput] = useState('')
-  const query = input.trim()
-  const enabled = query.length >= 2
-
-  const params = useMemo(() => ({ query, limit: 20, offset: 0 }), [query])
-
-  const { data, isFetching } = useQuery({
-    queryKey: healthKeys.markers(params),
-    queryFn: () => listMarkers(params),
-    enabled,
-  })
-
-  const options = data?.items ?? []
+  const qc = useQueryClient()
 
   return (
-    <Autocomplete<Marker>
-      value={value}
-      onChange={(_, v) => onChange(v)}
-      onInputChange={(_, v) => setInput(v)}
-      options={options}
-      loading={isFetching}
-      getOptionLabel={(o) =>
-        o.canonical_unit ? `${o.canonical_name} (${o.canonical_unit})` : o.canonical_name
-      }
-      isOptionEqualToValue={(a, b) => a.id === b.id}
-      filterOptions={(x) => x}
-      noOptionsText={enabled ? 'Nenhum marcador encontrado' : 'Digite ao menos 2 caracteres'}
-      renderInput={(params) => (
-        <TextField
-          {...params}
-          label={label}
-          size={size}
-          InputProps={{
-            ...params.InputProps,
-            endAdornment: (
-              <>
-                {isFetching ? <CircularProgress size={16} /> : null}
-                {params.InputProps.endAdornment}
-              </>
-            ),
-          }}
-        />
-      )}
+    <AsyncAutocompleteField
+      label={label}
+      size={size}
+      minChars={2}
+      value={value?.id ?? ''}
+      queryKey={healthKeys.markers({ ctx: 'autocomplete' })}
+      search={async (query, signal) => {
+        const items = await searchMarkers(query, signal)
+        items.forEach((m) => qc.setQueryData(healthKeys.marker(m.id), m))
+        return items.map(markerOption)
+      }}
+      resolve={async (id) => (value?.id === id ? markerOption(value) : null)}
+      onChange={(id) => {
+        if (!id) {
+          onChange(null)
+          return
+        }
+        void qc
+          .fetchQuery({
+            queryKey: healthKeys.marker(id),
+            queryFn: () => getMarker(id),
+            staleTime: Infinity,
+          })
+          .then(onChange)
+      }}
     />
   )
 }

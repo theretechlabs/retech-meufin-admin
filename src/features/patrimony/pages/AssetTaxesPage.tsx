@@ -8,7 +8,6 @@ import {
   DialogContent,
   DialogTitle,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -28,6 +27,8 @@ import RequestQuoteRoundedIcon from '@mui/icons-material/RequestQuoteRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Controller, useForm, useWatch } from 'react-hook-form'
 import { MoneyField } from '@/components/fields/MoneyField'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
 import {
   createTax,
   deleteTax,
@@ -57,7 +58,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/features/health/componen
 import { useToast } from '@/providers/ToastProvider'
 
 const CURRENT_YEAR = new Date().getFullYear()
-const YEAR_OPTIONS = Array.from({ length: 8 }, (_, i) => CURRENT_YEAR + 1 - i)
+const YEAR_OPTIONS = numericOptions(Array.from({ length: 8 }, (_, i) => CURRENT_YEAR + 1 - i))
 
 type FormValues = {
   asset_type: string
@@ -179,13 +180,13 @@ function TaxFormDialog({
               name="asset_type"
               control={control}
               render={({ field }) => (
-                <TextField {...field} select label="Bem" fullWidth>
-                  {ASSET_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Bem"
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={ASSET_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
             <Controller
@@ -193,13 +194,14 @@ function TaxFormDialog({
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} select label="Tipo de imposto" fullWidth required>
-                  {TAX_TYPE_OPTIONS.map((o) => (
-                    <MenuItem key={o.value} value={o.value}>
-                      {o.label}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Tipo de imposto"
+                  required
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={TAX_TYPE_OPTIONS}
+                  disableClearable
+                />
               )}
             />
           </Stack>
@@ -210,21 +212,16 @@ function TaxFormDialog({
               control={control}
               rules={{ required: 'Selecione o imóvel' }}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
+                <AutocompleteField
                   label="Imóvel"
-                  fullWidth
                   required
                   error={Boolean(errors.property_id)}
                   helperText={errors.property_id?.message}
-                >
-                  {(propertiesQuery.data?.items ?? []).map((p) => (
-                    <MenuItem key={p.id} value={p.id}>
-                      {p.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  loading={propertiesQuery.isLoading}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={(propertiesQuery.data?.items ?? []).map((p) => ({ value: p.id, label: p.name }))}
+                />
               )}
             />
           ) : (
@@ -233,21 +230,19 @@ function TaxFormDialog({
               control={control}
               rules={{ required: 'Selecione o veículo' }}
               render={({ field }) => (
-                <TextField
-                  {...field}
-                  select
+                <AutocompleteField
                   label="Veículo"
-                  fullWidth
                   required
                   error={Boolean(errors.vehicle_id)}
                   helperText={errors.vehicle_id?.message}
-                >
-                  {(vehiclesQuery.data?.items ?? []).map((v) => (
-                    <MenuItem key={v.id} value={v.id}>
-                      {v.nickname ?? `${v.make} ${v.model}`}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                  loading={vehiclesQuery.isLoading}
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={(vehiclesQuery.data?.items ?? []).map((v) => ({
+                    value: v.id,
+                    label: v.nickname ?? `${v.make} ${v.model}`,
+                  }))}
+                />
               )}
             />
           )}
@@ -258,13 +253,16 @@ function TaxFormDialog({
               control={control}
               rules={{ required: true }}
               render={({ field }) => (
-                <TextField {...field} select label="Ano de referência" sx={{ minWidth: 160 }} required>
-                  {YEAR_OPTIONS.map((y) => (
-                    <MenuItem key={y} value={String(y)}>
-                      {y}
-                    </MenuItem>
-                  ))}
-                </TextField>
+                <AutocompleteField
+                  label="Ano de referência"
+                  fullWidth={false}
+                  sx={{ minWidth: 160 }}
+                  required
+                  value={field.value}
+                  onChange={field.onChange}
+                  options={YEAR_OPTIONS}
+                  disableClearable
+                />
               )}
             />
             <Controller
@@ -402,57 +400,36 @@ export default function AssetTaxesPage() {
 
       <Card sx={{ p: 2, mb: 2 }}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            select
-            value={yearFilter}
-            onChange={(e) => setYearFilter(e.target.value)}
+          <AutocompleteField
             label="Ano"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 140 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {YEAR_OPTIONS.map((y) => (
-              <MenuItem key={y} value={String(y)}>
-                {y}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
+            emptyLabel="Todos"
+            value={yearFilter}
+            onChange={setYearFilter}
+            options={YEAR_OPTIONS}
+          />
+          <AutocompleteField
             label="Tipo"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 180 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {TAX_TYPE_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
-          <TextField
-            select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            emptyLabel="Todos"
+            value={typeFilter}
+            onChange={setTypeFilter}
+            options={TAX_TYPE_OPTIONS}
+          />
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 160 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            {TAX_STATUS_OPTIONS.map((o) => (
-              <MenuItem key={o.value} value={o.value}>
-                {o.label}
-              </MenuItem>
-            ))}
-          </TextField>
+            emptyLabel="Todos"
+            value={statusFilter}
+            onChange={setStatusFilter}
+            options={TAX_STATUS_OPTIONS}
+          />
         </Stack>
       </Card>
 

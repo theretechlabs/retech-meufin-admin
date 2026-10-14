@@ -11,7 +11,6 @@ import {
   IconButton,
   InputAdornment,
   Link,
-  MenuItem,
   Stack,
   Switch,
   Table,
@@ -38,6 +37,8 @@ import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { ACTIVE_FILTER_OPTIONS } from '@/components/fields/options'
 
 type FormValues = LabInput
 
@@ -133,13 +134,13 @@ function LabFormDialog({
             name="kind"
             control={control}
             render={({ field }) => (
-              <TextField {...field} select label="Tipo de local" fullWidth>
-                {LAB_KIND_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+              <AutocompleteField
+                label="Tipo de local"
+                value={field.value}
+                onChange={field.onChange}
+                options={LAB_KIND_OPTIONS}
+                disableClearable
+              />
             )}
           />
           <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -295,23 +296,19 @@ export default function LabsPage() {
               ),
             }}
           />
-          <TextField
-            select
-            value={status}
-            onChange={(e) => {
-              setStatus(e.target.value)
-              setPage(0)
-            }}
+          <AutocompleteField
             label="Status"
             size="small"
+            fullWidth={false}
             sx={{ minWidth: { sm: 220 } }}
-          >
-            <MenuItem value="">
-              <em>Todos</em>
-            </MenuItem>
-            <MenuItem value="true">Ativos</MenuItem>
-            <MenuItem value="false">Arquivados</MenuItem>
-          </TextField>
+            emptyLabel="Todos"
+            value={status}
+            onChange={(v) => {
+              setStatus(v)
+              setPage(0)
+            }}
+            options={ACTIVE_FILTER_OPTIONS}
+          />
         </Stack>
       </Card>
 

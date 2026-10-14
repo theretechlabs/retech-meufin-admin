@@ -1,4 +1,12 @@
-import type { AlertStatus, FuelType, MaintenanceStatus, OSItemCategory, ScheduleAlertStatus, VehicleStatus } from './api'
+import type {
+  AlertStatus,
+  FuelType,
+  MaintenanceStatus,
+  OSItemCategory,
+  OSItemType,
+  ScheduleAlertStatus,
+  VehicleStatus,
+} from './api'
 
 export const vehicleKeys = {
   all: ['vehicles'] as const,
@@ -134,6 +142,19 @@ export const OS_ITEM_CATEGORY_OPTIONS: { value: OSItemCategory; label: string }[
   OS_ITEM_CATEGORY_LABEL,
 ).map(([value, label]) => ({ value: value as OSItemCategory, label }))
 
+export const OS_ITEM_TYPE_OPTIONS: { value: OSItemType; label: string }[] = [
+  { value: 'product', label: 'Peça / Produto' },
+  { value: 'service', label: 'Serviço' },
+]
+
+/** Janela da aba Análise (só UI): meses de histórico consultados. */
+export const ANALYTICS_PERIOD_OPTIONS: { value: number; label: string }[] = [
+  { value: 3, label: '3 meses' },
+  { value: 6, label: '6 meses' },
+  { value: 12, label: '12 meses' },
+  { value: 24, label: '24 meses' },
+]
+
 export const SCHEDULE_ALERT_STATUS_LABEL: Record<ScheduleAlertStatus, string> = {
   pending: 'Pendente',
   due_soon: 'Próximo do vencimento',
@@ -173,6 +194,14 @@ export const MAINTENANCE_STATUS_OPTIONS = Object.entries(MAINTENANCE_STATUS_LABE
   ([value, label]) => ({ value: value as MaintenanceStatus, label })
 )
 
+/**
+ * Forma de pagamento da ordem de serviço. NÃO é a mesma lista de
+ * `@/features/finance/constants` (PAYMENT_METHOD_OPTIONS): os valores
+ * divergem (`cartao_debito` aqui vs `debito` lá) e a API grava
+ * `payment_method` da manutenção como texto livre, sem enum — unificar
+ * exige migrar os registros existentes. Até lá, esta é a fonte do domínio
+ * de veículos.
+ */
 export const PAYMENT_METHOD_OPTIONS = [
   { value: 'pix', label: 'Pix' },
   { value: 'cartao_credito', label: 'Cartão de Crédito' },

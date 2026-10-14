@@ -10,7 +10,6 @@ import {
   DialogTitle,
   Grid,
   IconButton,
-  MenuItem,
   Stack,
   Table,
   TableBody,
@@ -39,6 +38,7 @@ import {
 } from '../api'
 import {
   centsToReais,
+  CURRENT_YEAR,
   educationKeys,
   errorMessage,
   formatCents,
@@ -50,8 +50,9 @@ import {
 import { listFamilyMembers } from '@/features/health/api'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
-
-const CURRENT_YEAR = new Date().getFullYear()
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { numericOptions } from '@/components/fields/options'
+import { useSchoolYears } from '../hooks/useSchoolYears'
 
 type FormState = {
   member_id: string
@@ -104,12 +105,7 @@ export default function EnrollmentsPage() {
 
   const enrollments = data ?? []
   const members = membersQuery.data ?? []
-
-  const years = useMemo(() => {
-    const set = new Set<number>([CURRENT_YEAR])
-    enrollments.forEach((e) => set.add(e.school_year))
-    return Array.from(set).sort((a, b) => b - a)
-  }, [enrollments])
+  const years = useSchoolYears()
 
   const upsertMutation = useMutation({
     mutationFn: async () => {
@@ -189,21 +185,16 @@ export default function EnrollmentsPage() {
       />
 
       <Stack direction="row" spacing={2} sx={{ mb: 2 }}>
-        <TextField
-          select
-          size="small"
+        <AutocompleteField
           label="Ano letivo"
-          value={yearFilter}
-          onChange={(e) => setYearFilter(e.target.value === '' ? '' : Number(e.target.value))}
+          size="small"
+          emptyLabel="Todos os anos"
+          value={yearFilter === '' ? '' : String(yearFilter)}
+          onChange={(v) => setYearFilter(v === '' ? '' : Number(v))}
+          options={numericOptions(years)}
+          fullWidth={false}
           sx={{ minWidth: 160 }}
-        >
-          <MenuItem value="">Todos os anos</MenuItem>
-          {years.map((y) => (
-            <MenuItem key={y} value={y}>
-              {y}
-            </MenuItem>
-          ))}
-        </TextField>
+        />
       </Stack>
 
       {members.length === 0 && !membersQuery.isLoading && (
@@ -292,19 +283,13 @@ export default function EnrollmentsPage() {
         <DialogContent dividers>
           <Grid container spacing={2} sx={{ mt: 0 }}>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                select
-                fullWidth
+              <AutocompleteField
                 label="Membro"
                 value={form.member_id}
-                onChange={(e) => setForm({ ...form, member_id: e.target.value })}
-              >
-                {members.map((m) => (
-                  <MenuItem key={m.id} value={m.id}>
-                    {m.full_name}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setForm({ ...form, member_id: v })}
+                options={members.map((m) => ({ value: m.id, label: m.full_name }))}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
               <TextField
@@ -316,35 +301,22 @@ export default function EnrollmentsPage() {
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                select
-                fullWidth
+              <AutocompleteField
                 label="Etapa"
                 value={form.stage}
-                onChange={(e) => setForm({ ...form, stage: e.target.value as Stage })}
-              >
-                {STAGE_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setForm({ ...form, stage: v as Stage })}
+                options={STAGE_OPTIONS}
+                disableClearable
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 6 }}>
-              <TextField
-                select
-                fullWidth
+              <AutocompleteField
                 label="Turno"
+                emptyLabel="Não informar"
                 value={form.shift}
-                onChange={(e) => setForm({ ...form, shift: e.target.value as '' | Shift })}
-              >
-                <MenuItem value="">—</MenuItem>
-                {SHIFT_OPTIONS.map((o) => (
-                  <MenuItem key={o.value} value={o.value}>
-                    {o.label}
-                  </MenuItem>
-                ))}
-              </TextField>
+                onChange={(v) => setForm({ ...form, shift: v as '' | Shift })}
+                options={SHIFT_OPTIONS}
+              />
             </Grid>
             <Grid size={{ xs: 12, sm: 8 }}>
               <TextField
