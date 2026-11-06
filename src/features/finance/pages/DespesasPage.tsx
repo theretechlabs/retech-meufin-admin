@@ -24,6 +24,7 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -302,6 +303,8 @@ function formatQtyMilli(milli: number): string {
   return (milli / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 3 })
 }
 
+type ChildSortKey = 'purchase_date' | 'category' | 'amount'
+
 function ExpenseDetailRow({
   entry,
   colSpan,
@@ -315,6 +318,15 @@ function ExpenseDetailRow({
 }) {
   const isInvoice = (entry.type as string | null | undefined) === 'cartao'
   const [toEditPurchase, setToEditPurchase] = useState<Entry | null>(null)
+  const [sortKey, setSortKey] = useState<ChildSortKey>('purchase_date')
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
+  const toggleSort = (key: ChildSortKey) => {
+    if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+    else {
+      setSortKey(key)
+      setSortDir(key === 'category' ? 'asc' : 'desc')
+    }
+  }
 
   const childrenQuery = useQuery({
     queryKey: financeKeys.entries({ parent_id: entry.id }),
@@ -327,7 +339,19 @@ function ExpenseDetailRow({
     enabled: open && !isInvoice && Boolean(entry.fiscal_document_id),
   })
 
-  const children = childrenQuery.data?.items ?? []
+  const rawChildren = childrenQuery.data?.items
+  const children = useMemo(() => {
+    const list = [...(rawChildren ?? [])]
+    const dir = sortDir === 'asc' ? 1 : -1
+    list.sort((a, b) => {
+      let cmp = 0
+      if (sortKey === 'purchase_date') cmp = (a.purchase_date ?? '').localeCompare(b.purchase_date ?? '')
+      else if (sortKey === 'category') cmp = categoryLabel(a.type).localeCompare(categoryLabel(b.type), 'pt-BR')
+      else cmp = a.amount_cents - b.amount_cents
+      return cmp * dir || a.description.localeCompare(b.description, 'pt-BR')
+    })
+    return list
+  }, [rawChildren, sortKey, sortDir, categoryLabel])
   const childrenSum = children.reduce((acc, c) => acc + c.amount_cents, 0)
   const fiscalItems = fiscalQuery.data ?? []
 
@@ -348,10 +372,34 @@ function ExpenseDetailRow({
                 <Table size="small">
                   <TableHead>
                     <TableRow>
-                      <TableCell>Data da compra</TableCell>
+                      <TableCell sortDirection={sortKey === 'purchase_date' ? sortDir : false}>
+                        <TableSortLabel
+                          active={sortKey === 'purchase_date'}
+                          direction={sortKey === 'purchase_date' ? sortDir : 'desc'}
+                          onClick={() => toggleSort('purchase_date')}
+                        >
+                          Data da compra
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell>Descrição</TableCell>
-                      <TableCell>Categoria</TableCell>
-                      <TableCell align="right">Valor</TableCell>
+                      <TableCell sortDirection={sortKey === 'category' ? sortDir : false}>
+                        <TableSortLabel
+                          active={sortKey === 'category'}
+                          direction={sortKey === 'category' ? sortDir : 'asc'}
+                          onClick={() => toggleSort('category')}
+                        >
+                          Categoria
+                        </TableSortLabel>
+                      </TableCell>
+                      <TableCell align="right" sortDirection={sortKey === 'amount' ? sortDir : false}>
+                        <TableSortLabel
+                          active={sortKey === 'amount'}
+                          direction={sortKey === 'amount' ? sortDir : 'desc'}
+                          onClick={() => toggleSort('amount')}
+                        >
+                          Valor
+                        </TableSortLabel>
+                      </TableCell>
                       <TableCell align="right">Ações</TableCell>
                     </TableRow>
                   </TableHead>
