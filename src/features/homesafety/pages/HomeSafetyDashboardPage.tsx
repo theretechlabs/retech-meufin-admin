@@ -47,53 +47,7 @@ import {
 } from '../constants'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
-
-type SvgIconComponent = React.ElementType
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-}: {
-  title: string
-  value: number | string
-  icon: SvgIconComponent
-  color?: string
-}) {
-  const theme = useTheme()
-  const c = color ?? theme.palette.primary.main
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h4" fontWeight={800}>
-              {value}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: alpha(c, 0.12),
-              color: c,
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
-}
+import { StatCard } from '@/components/common/StatCard'
 
 function DueRow({ item, danger }: { item: HomeSafetyItem; danger?: boolean }) {
   const theme = useTheme()
@@ -201,33 +155,33 @@ export default function HomeSafetyDashboardPage() {
       ) : (
         <>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Vencidos"
+                label="Vencidos"
                 value={statusMap.vencido ?? 0}
                 icon={ReportProblemRoundedIcon}
                 color={theme.palette.error.main}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Atenção (30 dias)"
+                label="Atenção (30 dias)"
                 value={statusMap.atencao ?? 0}
                 icon={WarningAmberRoundedIcon}
                 color={theme.palette.warning.main}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Próximos (90 dias)"
+                label="Próximos (90 dias)"
                 value={statusMap.proximo ?? 0}
                 icon={ScheduleRoundedIcon}
                 color={theme.palette.info.main}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Em dia"
+                label="Em dia"
                 value={statusMap.ok ?? 0}
                 icon={CheckCircleOutlineRoundedIcon}
                 color={theme.palette.success.main}
@@ -236,20 +190,20 @@ export default function HomeSafetyDashboardPage() {
           </Grid>
 
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <StatCard title="Total de itens" value={data.total_items} icon={ShieldRoundedIcon} />
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+              <StatCard label="Total de itens" value={data.total_items} icon={ShieldRoundedIcon} />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Sem controle"
+                label="Sem controle"
                 value={statusMap.sem_controle ?? 0}
                 icon={ScheduleRoundedIcon}
                 color={theme.palette.text.disabled}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 6 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 6 }}>
               <StatCard
-                title="Custo de manutenção (12 meses)"
+                label="Custo de manutenção (12 meses)"
                 value={formatCents(data.annual_cost_cents)}
                 icon={PaymentsRoundedIcon}
                 color={theme.palette.secondary.main}

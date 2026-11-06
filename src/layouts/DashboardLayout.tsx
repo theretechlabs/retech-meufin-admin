@@ -7,6 +7,7 @@ import {
   LAYOUT_DRAWER_MINI_WIDTH,
 } from '@/components/layout/MainHeader'
 import { SidebarNav } from '@/components/layout/SidebarNav'
+import { MobileBottomNav, MOBILE_BOTTOM_NAV_HEIGHT } from '@/components/layout/MobileBottomNav'
 import { useCatalogs } from '@/lib/catalogs/useCatalog'
 import { useUiStore } from '@/store/uiStore'
 
@@ -71,13 +72,18 @@ export function DashboardLayout() {
           flexGrow: 1,
           width: { lg: `calc(100% - ${desktopWidth}px)` },
           minHeight: '100vh',
+          minWidth: 0,
           px: { xs: 2, sm: 3 },
-          py: 3,
+          pt: 3,
+          // Telefone: espaço para o rodapé fixo + barra home do iPhone.
+          pb: { xs: `calc(${MOBILE_BOTTOM_NAV_HEIGHT + 24}px + env(safe-area-inset-bottom))`, sm: 3 },
         }}
       >
         <Toolbar sx={{ minHeight: { xs: 64, sm: 72 } }} />
         <Outlet />
       </Box>
+
+      <MobileBottomNav />
     </Box>
   )
 }

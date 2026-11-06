@@ -32,3 +32,14 @@ Helpers: `optionsFromLabels(X_LABEL)` para enums que só têm mapa de rótulo; `
 - Datas `YYYY-MM-DD` na API; "hoje" é o fuso local, nunca `toISOString()`.
 - Prettier só nos arquivos que você alterou e só no trecho alterado: não reformatar arquivos inteiros numa PR de outra coisa.
 - Antes de commitar: `npm run type-check`, `npx eslint <pasta alterada>`, `npm run build`.
+
+## Telefone (PWA): uma base, dois layouts
+
+O admin é instalável como PWA e precisa funcionar em 390px sem prejudicar o desktop. O gatilho de TODA adaptação é largura (`useIsMobile()` = abaixo de `sm`), nunca `display-mode`; `useIsStandalone()` só para detalhes de app instalado.
+
+- **Lista = `DataTable`** (`@/components/tables/DataTable`): colunas descritas uma vez; desktop renderiza `<Table>`, telefone renderiza cards. Papéis: `mobile: 'title' | 'value' | 'meta' | 'actions' | 'hidden'`, `mobileLabel` para metadado ambíguo, `mobileOnly` para a descrição que o desktop não mostra. Linha expansível = `leading` + `renderDetail` (detalhe com hooks vira componente próprio). Ordenação controlada = `sortable` + `sort`/`onSort`. Nunca escrever `<TableContainer><Table>` numa página de lista.
+- **Filtros = `FilterBar`** (`@/components/common/FilterBar`): `primary` é a busca (sempre visível), o resto fica atrás do botão "Filtros" no telefone; `activeCount` = filtros fora do padrão.
+- **Indicador = `StatCard`** (`@/components/common/StatCard`): único no repositório. Grid do card: `xs: 6` (duas colunas no telefone).
+- **Diálogo**: já vira tela cheia no telefone pelo tema (`MuiDialog`/`MuiDialogActions` em `createAppTheme.ts`); não usar `fullScreen` à mão.
+- **Rodapé mobile** (`MobileBottomNav`): atalhos fixos; "Lançar" abre Despesas com `?nova=1`. Permissão vem do menu principal, pela rota.
+- Título de página pelo `PageHeader` (já compacto no telefone). Nada de `Typography h4` solto.

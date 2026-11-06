@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  Box,
   Button,
   Card,
   Chip,
@@ -12,12 +11,6 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -49,6 +42,8 @@ import {
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PropertyDocumentsDialog } from '../components/PropertyDocumentsDialog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -367,25 +362,27 @@ export default function PropertiesPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <TextField
-          value={q}
-          onChange={(e) => {
-            setQ(e.target.value)
-            setPage(0)
-          }}
-          placeholder="Buscar por nome, cidade, endereço…"
-          size="small"
-          fullWidth
-          InputProps={{
-            startAdornment: (
-              <InputAdornment position="start">
-                <SearchRoundedIcon fontSize="small" />
-              </InputAdornment>
-            ),
-          }}
-        />
-      </Card>
+      <FilterBar
+        primary={
+          <TextField
+            value={q}
+            onChange={(e) => {
+              setQ(e.target.value)
+              setPage(0)
+            }}
+            placeholder="Buscar por nome, cidade, endereço…"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      />
 
       {isLoading ? (
         <LoadingState />
@@ -404,65 +401,86 @@ export default function PropertiesPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Imóvel</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Cidade</TableCell>
-                  <TableCell>Área</TableCell>
-                  <TableCell align="right">Valor atual</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {properties.map((p) => (
-                  <TableRow key={p.id} hover>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {p.name}
-                        </Typography>
-                        {p.address && (
-                          <Typography variant="caption" color="text.secondary">
-                            {p.address}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell>
-                      <Chip size="small" label={propertyType.labelOf(p.property_type)} variant="outlined" />
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {p.city ? `${p.city}${p.state ? `/${p.state}` : ''}` : '—'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{formatArea(p.area_m2)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {formatCents(p.current_value_cents ?? p.purchase_value_cents)}
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Documentos">
-                        <IconButton size="small" onClick={() => setDocsFor(p)}>
-                          <FolderRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(p)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(p)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={properties}
+            getRowKey={(p) => p.id}
+            size="medium"
+            columns={[
+              {
+                key: 'name',
+                header: 'Imóvel',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (p) => (
+                  <>
+                    {p.name}
+                    {p.address && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        {p.address}
+                      </Typography>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: 'type',
+                header: 'Tipo',
+                render: (p) => (
+                  <Chip size="small" label={propertyType.labelOf(p.property_type)} variant="outlined" />
+                ),
+              },
+              {
+                key: 'city',
+                header: 'Cidade',
+                cellSx: { color: 'text.secondary' },
+                render: (p) => (p.city ? `${p.city}${p.state ? `/${p.state}` : ''}` : '—'),
+              },
+              {
+                key: 'area',
+                header: 'Área',
+                cellSx: { color: 'text.secondary' },
+                render: (p) => formatArea(p.area_m2),
+              },
+              {
+                key: 'value',
+                header: 'Valor atual',
+                align: 'right',
+                mobile: 'value',
+                cellSx: { fontWeight: 600 },
+                render: (p) => formatCents(p.current_value_cents ?? p.purchase_value_cents),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (p) => (
+                  <>
+                    <Tooltip title="Documentos">
+                      <IconButton size="small" onClick={() => setDocsFor(p)}>
+                        <FolderRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(p)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(p)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

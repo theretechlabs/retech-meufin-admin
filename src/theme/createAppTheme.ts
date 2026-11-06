@@ -5,6 +5,9 @@ import { fonts, glow } from './tokens'
 
 const C = colorTemplate
 
+/** Telefone: abaixo do breakpoint `sm` (600px) do MUI. Mesmo corte de useIsMobile(). */
+const PHONE = '@media (max-width:599.95px)'
+
 declare module '@mui/material/styles' {
   interface Palette {
     neon: {
@@ -191,6 +194,55 @@ export function createAppTheme(mode: PaletteMode) {
         styleOverrides: {
           notchedOutline: {
             borderColor: isDark ? C.border.strong : C.border.onLight12,
+          },
+        },
+      },
+      // Telefone: todo Dialog vira tela cheia (sem margem, sem raio), com o
+      // rodapé de ações fixo e acima da safe-area. Regra única no tema para
+      // os diálogos existentes não precisarem de `fullScreen` um a um.
+      MuiDialog: {
+        styleOverrides: {
+          root: {
+            [PHONE]: {
+              '& .MuiDialog-container': { alignItems: 'stretch' },
+              '& .MuiDialog-paper': {
+                margin: 0,
+                width: '100%',
+                maxWidth: '100%',
+                height: '100%',
+                maxHeight: '100%',
+                borderRadius: 0,
+                border: 'none',
+              },
+            },
+          },
+        },
+      },
+      MuiDialogActions: {
+        styleOverrides: {
+          root: {
+            [PHONE]: {
+              position: 'sticky',
+              bottom: 0,
+              backgroundColor: isDark ? C.surface.elevated : C.light.paper,
+              borderTop: `1px solid ${isDark ? C.border.subtle : C.border.onLight}`,
+              padding: '12px 16px',
+              paddingBottom: 'max(12px, env(safe-area-inset-bottom))',
+              flexWrap: 'wrap',
+              gap: 8,
+              '& > :not(:first-of-type)': { marginLeft: 0 },
+              '& .MuiButton-root': { flex: '1 1 auto', minHeight: 44 },
+            },
+          },
+        },
+      },
+      MuiTableCell: {
+        styleOverrides: {
+          root: {
+            [PHONE]: {
+              paddingLeft: 10,
+              paddingRight: 10,
+            },
           },
         },
       },

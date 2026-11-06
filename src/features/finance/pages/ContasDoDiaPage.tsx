@@ -11,12 +11,6 @@ import {
   DialogTitle,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   ToggleButton,
   ToggleButtonGroup,
   Tooltip,
@@ -36,6 +30,7 @@ import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { SettleEntryDialog } from '../components/SettleEntryDialog'
 import { EntryAttachmentsSection } from '../components/EntryAttachments'
 import { PageHeader } from '@/features/health/components/PageHeader'
+import { DataTable, type DataColumn } from '@/components/tables/DataTable'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
 function isoDate(d: Date): string {
@@ -70,67 +65,80 @@ function EntriesTable({
   labelOf: (slug?: string | null) => string
 }) {
   const incomeType = useCatalog('finance.income_type')
-  return (
-    <TableContainer>
-      <Table size="small">
-        <TableHead>
-          <TableRow>
-            <TableCell>Vencimento</TableCell>
-            <TableCell>Descrição</TableCell>
-            <TableCell>Categoria</TableCell>
-            <TableCell align="right">Valor</TableCell>
-            <TableCell align="right">Ações</TableCell>
-          </TableRow>
-        </TableHead>
-        <TableBody>
-          {entries.map((e) => (
-            <TableRow key={e.id} hover>
-              <TableCell sx={{ whiteSpace: 'nowrap' }}>{formatDueDate(e.due_date)}</TableCell>
-              <TableCell sx={{ fontWeight: 600 }}>
-                {e.description || 'Sem descrição'}
-                {e.installment_number != null && e.installment_total != null && (
-                  <Chip
-                    size="small"
-                    variant="outlined"
-                    label={`${e.installment_number}/${e.installment_total}`}
-                    sx={{ ml: 1 }}
-                  />
-                )}
-              </TableCell>
-              <TableCell sx={{ color: 'text.secondary' }}>
-                {categoryLabel(e, labelOf, incomeType.labelOf)}
-              </TableCell>
-              <TableCell align="right" sx={{ fontWeight: 700, whiteSpace: 'nowrap' }}>
-                {formatCents(e.amount_cents)}
-              </TableCell>
-              <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                <Tooltip title="Documentos para pagar (boleto, QR Pix, nota…)">
-                  <IconButton
-                    size="small"
-                    onClick={() => onDocuments(e)}
-                    aria-label="Documentos para pagar"
-                    sx={{ mr: 0.5 }}
-                  >
-                    <RequestQuoteRoundedIcon fontSize="small" />
-                  </IconButton>
-                </Tooltip>
-                <Tooltip title={kind === 'debit' ? 'Pagar (liquidar)' : 'Receber (liquidar)'}>
-                  <Button
-                    size="small"
-                    variant="outlined"
-                    startIcon={<TaskAltRoundedIcon />}
-                    onClick={() => onSettle(e)}
-                  >
-                    Liquidar
-                  </Button>
-                </Tooltip>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </TableContainer>
-  )
+  const columns: DataColumn<Entry>[] = [
+    {
+      key: 'due',
+      header: 'Vencimento',
+      mobileLabel: 'Vence',
+      cellSx: { whiteSpace: 'nowrap' },
+      render: (e) => formatDueDate(e.due_date),
+    },
+    {
+      key: 'description',
+      header: 'Descrição',
+      mobile: 'title',
+      cellSx: { fontWeight: 600 },
+      render: (e) => (
+        <>
+          {e.description || 'Sem descrição'}
+          {e.installment_number != null && e.installment_total != null && (
+            <Chip
+              size="small"
+              variant="outlined"
+              label={`${e.installment_number}/${e.installment_total}`}
+              sx={{ ml: 1 }}
+            />
+          )}
+        </>
+      ),
+    },
+    {
+      key: 'category',
+      header: 'Categoria',
+      cellSx: { color: 'text.secondary' },
+      render: (e) => categoryLabel(e, labelOf, incomeType.labelOf),
+    },
+    {
+      key: 'amount',
+      header: 'Valor',
+      align: 'right',
+      mobile: 'value',
+      cellSx: { fontWeight: 700, whiteSpace: 'nowrap' },
+      render: (e) => formatCents(e.amount_cents),
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      align: 'right',
+      mobile: 'actions',
+      cellSx: { whiteSpace: 'nowrap' },
+      render: (e) => (
+        <>
+          <Tooltip title="Documentos para pagar (boleto, QR Pix, nota…)">
+            <IconButton
+              size="small"
+              onClick={() => onDocuments(e)}
+              aria-label="Documentos para pagar"
+              sx={{ mr: 0.5 }}
+            >
+              <RequestQuoteRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title={kind === 'debit' ? 'Pagar (liquidar)' : 'Receber (liquidar)'}>
+            <Button
+              size="small"
+              variant="outlined"
+              startIcon={<TaskAltRoundedIcon />}
+              onClick={() => onSettle(e)}
+            >
+              Liquidar
+            </Button>
+          </Tooltip>
+        </>
+      ),
+    },
+  ]
+  return <DataTable rows={entries} columns={columns} getRowKey={(e) => e.id} />
 }
 
 function Section({

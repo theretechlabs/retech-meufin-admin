@@ -3,8 +3,6 @@ import {
   Accordion,
   AccordionDetails,
   AccordionSummary,
-  alpha,
-  Box,
   Button,
   Card,
   CardContent,
@@ -43,6 +41,7 @@ import { PageHeader } from '../components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { MultiAutocompleteField } from '@/components/fields/MultiAutocompleteField'
+import { StatCard } from '@/components/common/StatCard'
 
 // ---------------------------------------------------------------------------
 // Cards de contagem (mantidos da v1)
@@ -73,51 +72,6 @@ function savePrefs(p: PanelPrefs) {
   } catch {
     // storage cheio/indisponível: preferências viram só de sessão
   }
-}
-
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-}: {
-  title: string
-  value: number | string
-  icon: typeof GroupsRoundedIcon
-}) {
-  return (
-    <Card>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={600}>
-              {title}
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{ fontFamily: (t) => t.typography.h5.fontFamily, fontWeight: 800, mt: 0.5 }}
-            >
-              {value}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.15 : 0.12),
-              color: 'primary.main',
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -193,22 +147,22 @@ export default function HealthDashboardPage() {
       />
 
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Membros" value={counts.data?.family_members ?? 0} icon={GroupsRoundedIcon} />
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard label="Membros" value={counts.data?.family_members ?? 0} icon={GroupsRoundedIcon} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Resultados" value={counts.data?.exam_results ?? 0} icon={DescriptionRoundedIcon} />
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard label="Resultados" value={counts.data?.exam_results ?? 0} icon={DescriptionRoundedIcon} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Marcadores (tenant)"
+            label="Marcadores (tenant)"
             value={counts.data?.tenant_markers ?? 0}
             icon={BiotechRoundedIcon}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Documentos p/ revisar"
+            label="Documentos p/ revisar"
             value={counts.data?.documents_pending_review ?? 0}
             icon={PendingActionsRoundedIcon}
           />

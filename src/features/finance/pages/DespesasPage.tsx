@@ -1,12 +1,11 @@
-import { Fragment, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   Alert,
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -18,13 +17,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  TableSortLabel,
   TextField,
   Tooltip,
   Typography,
@@ -62,6 +54,7 @@ import {
   updateEntry,
   type Entry,
   type EntryInput,
+  type FiscalItem,
   type ListEntriesParams,
 } from '../api'
 import {
@@ -84,6 +77,8 @@ import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable, type DataColumn } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { DeleteEntryDialog } from '../components/DeleteEntryDialog'
@@ -109,6 +104,7 @@ import { EntryDetailDialog } from '../components/EntryDetailDialog'
 import { AttachmentDraftList, type AttachmentDraft } from '../components/EntryAttachments'
 import { isAttachmentReplicable } from '../constants'
 import { CancelEntryDialog } from '../components/CancelEntryDialog'
+import { StatCard } from '@/components/common/StatCard'
 
 const now = new Date()
 
@@ -126,41 +122,6 @@ const initialFilters: Filters = {
   month: now.getMonth() + 1,
   status: '',
   type: '',
-}
-
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  hint,
-  color,
-}: {
-  label: string
-  value: string
-  /** Uma linha explicando o recorte (eixo, contagem). Evita a leitura errada do número. */
-  hint?: string
-  color?: string
-}) {
-  return (
-    <Card variant="outlined" sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography variant="overline" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="h5" sx={{ fontWeight: 800, color, mt: 0.5 }}>
-          {value}
-        </Typography>
-        {hint && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            {hint}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -307,36 +268,33 @@ type ChildSortKey = 'purchase_date' | 'category' | 'amount'
 
 function ExpenseDetailRow({
   entry,
-  colSpan,
-  open,
   categoryLabel,
 }: {
   entry: Entry
-  colSpan: number
-  open: boolean
   categoryLabel: (v?: string | null) => string
 }) {
   const isInvoice = (entry.type as string | null | undefined) === 'cartao'
   const [toEditPurchase, setToEditPurchase] = useState<Entry | null>(null)
   const [sortKey, setSortKey] = useState<ChildSortKey>('purchase_date')
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc')
-  const toggleSort = (key: ChildSortKey) => {
-    if (key === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
+  const toggleSort = (key: string) => {
+    const k = key as ChildSortKey
+    if (k === sortKey) setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     else {
-      setSortKey(key)
-      setSortDir(key === 'category' ? 'asc' : 'desc')
+      setSortKey(k)
+      setSortDir(k === 'category' ? 'asc' : 'desc')
     }
   }
 
   const childrenQuery = useQuery({
     queryKey: financeKeys.entries({ parent_id: entry.id }),
     queryFn: () => listEntries({ parent_id: entry.id, kind: 'debit', limit: 500 }),
-    enabled: open && isInvoice,
+    enabled: isInvoice,
   })
   const fiscalQuery = useQuery({
     queryKey: [...financeKeys.all, 'fiscal-items', entry.id] as const,
     queryFn: () => listFiscalItems(entry.id),
-    enabled: open && !isInvoice && Boolean(entry.fiscal_document_id),
+    enabled: !isInvoice && Boolean(entry.fiscal_document_id),
   })
 
   const rawChildren = childrenQuery.data?.items
@@ -355,127 +313,95 @@ function ExpenseDetailRow({
   const childrenSum = children.reduce((acc, c) => acc + c.amount_cents, 0)
   const fiscalItems = fiscalQuery.data ?? []
 
+  const purchaseColumns: DataColumn<Entry>[] = [
+    {
+      key: 'purchase_date',
+      header: 'Data da compra',
+      sortable: true,
+      render: (c) => (c.purchase_date ? formatDateBR(c.purchase_date) : '—'),
+    },
+    { key: 'description', header: 'Descrição', mobile: 'title', render: (c) => c.description },
+    { key: 'category', header: 'Categoria', sortable: true, render: (c) => categoryLabel(c.type) },
+    {
+      key: 'amount',
+      header: 'Valor',
+      align: 'right',
+      mobile: 'value',
+      sortable: true,
+      render: (c) => formatCents(c.amount_cents),
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      align: 'right',
+      mobile: 'actions',
+      render: (c) => (
+        <Tooltip title="Editar compra">
+          <IconButton size="small" onClick={() => setToEditPurchase(c)}>
+            <EditRoundedIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      ),
+    },
+  ]
+
+  const fiscalColumns: DataColumn<FiscalItem>[] = [
+    { key: 'item', header: 'Item', mobile: 'title', render: (it) => it.description },
+    { key: 'qty', header: 'Qtd.', align: 'right', mobileLabel: 'Qtd.', render: (it) => formatQtyMilli(it.quantity_milli) },
+    {
+      key: 'unit',
+      header: 'Unit.',
+      align: 'right',
+      mobileLabel: 'Unit.',
+      render: (it) => (it.unit_cents ? formatCents(it.unit_cents) : '—'),
+    },
+    { key: 'total', header: 'Total', align: 'right', mobile: 'value', render: (it) => formatCents(it.amount_cents) },
+    { key: 'category', header: 'Categoria', render: (it) => (it.category ? categoryLabel(it.category) : '—') },
+  ]
+
   return (
-    <TableRow>
-      <TableCell colSpan={colSpan} sx={{ py: 0, borderBottom: open ? undefined : 'none' }}>
-        <Collapse in={open} timeout="auto" unmountOnExit>
-          <Box sx={{ py: 1.5, pl: 4 }}>
-            {isInvoice ? (
-              childrenQuery.isLoading ? (
-                <LoadingState />
-              ) : children.length === 0 ? (
-                <Typography variant="body2" color="text.secondary">
-                  Nenhuma compra nesta fatura.
-                </Typography>
-              ) : (
-                <>
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell sortDirection={sortKey === 'purchase_date' ? sortDir : false}>
-                        <TableSortLabel
-                          active={sortKey === 'purchase_date'}
-                          direction={sortKey === 'purchase_date' ? sortDir : 'desc'}
-                          onClick={() => toggleSort('purchase_date')}
-                        >
-                          Data da compra
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell>Descrição</TableCell>
-                      <TableCell sortDirection={sortKey === 'category' ? sortDir : false}>
-                        <TableSortLabel
-                          active={sortKey === 'category'}
-                          direction={sortKey === 'category' ? sortDir : 'asc'}
-                          onClick={() => toggleSort('category')}
-                        >
-                          Categoria
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell align="right" sortDirection={sortKey === 'amount' ? sortDir : false}>
-                        <TableSortLabel
-                          active={sortKey === 'amount'}
-                          direction={sortKey === 'amount' ? sortDir : 'desc'}
-                          onClick={() => toggleSort('amount')}
-                        >
-                          Valor
-                        </TableSortLabel>
-                      </TableCell>
-                      <TableCell align="right">Ações</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {children.map((c) => (
-                      <TableRow key={c.id}>
-                        <TableCell>
-                          {c.purchase_date ? formatDateBR(c.purchase_date) : '—'}
-                        </TableCell>
-                        <TableCell>{c.description}</TableCell>
-                        <TableCell>{categoryLabel(c.type)}</TableCell>
-                        <TableCell align="right">{formatCents(c.amount_cents)}</TableCell>
-                        <TableCell align="right">
-                          <Tooltip title="Editar compra">
-                            <IconButton size="small" onClick={() => setToEditPurchase(c)}>
-                              <EditRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-                {children.length > 0 && (
-                  <Typography
-                    variant="caption"
-                    color={childrenSum !== entry.amount_cents ? 'warning.main' : 'text.secondary'}
-                    sx={{ display: 'block', textAlign: 'right', mt: 1 }}
-                  >
-                    Soma das compras: {formatCents(childrenSum)}
-                    {childrenSum !== entry.amount_cents
-                      ? ` — difere do total da fatura (${formatCents(entry.amount_cents)})`
-                      : ''}
-                  </Typography>
-                )}
-                </>
-              )
-            ) : fiscalQuery.isLoading ? (
-              <LoadingState />
-            ) : fiscalItems.length === 0 ? (
-              <Typography variant="body2" color="text.secondary">
-                Nenhum item de cupom vinculado.
-              </Typography>
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Item</TableCell>
-                    <TableCell align="right">Qtd.</TableCell>
-                    <TableCell align="right">Unit.</TableCell>
-                    <TableCell align="right">Total</TableCell>
-                    <TableCell>Categoria</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {fiscalItems.map((it) => (
-                    <TableRow key={it.id}>
-                      <TableCell>{it.description}</TableCell>
-                      <TableCell align="right">{formatQtyMilli(it.quantity_milli)}</TableCell>
-                      <TableCell align="right">
-                        {it.unit_cents ? formatCents(it.unit_cents) : '—'}
-                      </TableCell>
-                      <TableCell align="right">{formatCents(it.amount_cents)}</TableCell>
-                      <TableCell>{it.category ? categoryLabel(it.category) : '—'}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
-          </Box>
-        </Collapse>
-        {toEditPurchase && (
-          <PurchaseEditDialog purchase={toEditPurchase} onClose={() => setToEditPurchase(null)} />
-        )}
-      </TableCell>
-    </TableRow>
+    <Box sx={{ py: 1.5, pl: { xs: 0, sm: 4 } }}>
+      {isInvoice ? (
+        childrenQuery.isLoading ? (
+          <LoadingState />
+        ) : children.length === 0 ? (
+          <Typography variant="body2" color="text.secondary">
+            Nenhuma compra nesta fatura.
+          </Typography>
+        ) : (
+          <>
+            <DataTable
+              rows={children}
+              columns={purchaseColumns}
+              getRowKey={(c) => c.id}
+              sort={{ key: sortKey, dir: sortDir }}
+              onSort={toggleSort}
+            />
+            <Typography
+              variant="caption"
+              color={childrenSum !== entry.amount_cents ? 'warning.main' : 'text.secondary'}
+              sx={{ display: 'block', textAlign: 'right', mt: 1 }}
+            >
+              Soma das compras: {formatCents(childrenSum)}
+              {childrenSum !== entry.amount_cents
+                ? ` — difere do total da fatura (${formatCents(entry.amount_cents)})`
+                : ''}
+            </Typography>
+          </>
+        )
+      ) : fiscalQuery.isLoading ? (
+        <LoadingState />
+      ) : fiscalItems.length === 0 ? (
+        <Typography variant="body2" color="text.secondary">
+          Nenhum item de cupom vinculado.
+        </Typography>
+      ) : (
+        <DataTable rows={fiscalItems} columns={fiscalColumns} getRowKey={(it) => it.id} />
+      )}
+  {toEditPurchase && (
+    <PurchaseEditDialog purchase={toEditPurchase} onClose={() => setToEditPurchase(null)} />
+  )}
+    </Box>
   )
 }
 
@@ -1358,6 +1284,23 @@ export default function DespesasPage() {
     setEditing(null)
     setFormOpen(true)
   }
+  // Atalho "Lançar" do rodapé mobile chega com ?nova=1: o formulário de
+  // criação abre derivado da URL; fechar limpa a query (reload não reabre).
+  const [searchParams, setSearchParams] = useSearchParams()
+  const wantsNew = searchParams.has('nova')
+  const closeForm = () => {
+    setFormOpen(false)
+    if (wantsNew) {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev)
+          next.delete('nova')
+          return next
+        },
+        { replace: true },
+      )
+    }
+  }
   const openEdit = (e: Entry) => {
     setEditing(e)
     setFormOpen(true)
@@ -1383,7 +1326,7 @@ export default function DespesasPage() {
       {/* Cards de resumo */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* Eixo competência: o que VENCE no mês — é o que a lista abaixo mostra. */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Contas do mês"
             value={formatCents(summary?.due.total_cents ?? 0)}
@@ -1394,7 +1337,7 @@ export default function DespesasPage() {
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Pago"
             value={formatCents(summary?.due.paid_cents ?? 0)}
@@ -1406,7 +1349,7 @@ export default function DespesasPage() {
             color="error.main"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="A pagar"
             value={formatCents(summary?.due.open_cents ?? 0)}
@@ -1415,7 +1358,7 @@ export default function DespesasPage() {
           />
         </Grid>
         {/* Eixo caixa: o que foi PAGO no mês, qualquer vencimento — o número da dashboard. */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Saiu do caixa"
             value={formatCents(summary?.cash.paid_cents ?? 0)}
@@ -1427,7 +1370,7 @@ export default function DespesasPage() {
           />
         </Grid>
         {/* Indicador: quanto a família perdeu por atrasar (encargos dos pagamentos do mês). */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Juros e multa"
             value={formatCents(summary?.cash.late_charges_cents ?? 0)}
@@ -1444,86 +1387,86 @@ export default function DespesasPage() {
       </Grid>
 
       {/* Filtros */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <TextField
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setPage(0)
-                }}
-                placeholder="Buscar por descrição…"
-                size="small"
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRoundedIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AutocompleteField
-                label="Membro"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.family_member_id}
-                onChange={(v) => setFilter('family_member_id', v)}
-                options={(membersQuery.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Mês"
-                size="small"
-                value={String(filters.month)}
-                onChange={(v) => setFilter('month', Number(v))}
-                options={numericOptions(MONTH_OPTIONS)}
-                disableClearable
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Ano"
-                size="small"
-                value={String(filters.year)}
-                onChange={(v) => setFilter('year', Number(v))}
-                options={numericOptions(yearsList)}
-                disableClearable
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 6, md: 2 }}>
-              <AutocompleteField
-                label="Status"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.status}
-                onChange={(v) => setFilter('status', v)}
-                options={entryStatus.options}
-                loading={entryStatus.isLoading}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <AutocompleteField
-                label="Categoria"
-                size="small"
-                emptyLabel="Todas"
-                value={filters.type}
-                onChange={(v) => setFilter('type', v)}
-                options={activeCategories.map((cat) => ({
-                  value: cat.slug,
-                  label: cat.name,
-                  description: cat.group_name,
-                }))}
-              />
-            </Grid>
+      <FilterBar
+        activeCount={Object.entries(filters).filter(([k, v]) => k !== 'month' && k !== 'year' && Boolean(v)).length}
+        primary={
+          <TextField
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setPage(0)
+            }}
+            placeholder="Buscar por descrição…"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      >
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <AutocompleteField
+              label="Membro"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.family_member_id}
+              onChange={(v) => setFilter('family_member_id', v)}
+              options={(membersQuery.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+            />
           </Grid>
-        </CardContent>
-      </Card>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Mês"
+              size="small"
+              value={String(filters.month)}
+              onChange={(v) => setFilter('month', Number(v))}
+              options={numericOptions(MONTH_OPTIONS)}
+              disableClearable
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Ano"
+              size="small"
+              value={String(filters.year)}
+              onChange={(v) => setFilter('year', Number(v))}
+              options={numericOptions(yearsList)}
+              disableClearable
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 6, md: 2 }}>
+            <AutocompleteField
+              label="Status"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.status}
+              onChange={(v) => setFilter('status', v)}
+              options={entryStatus.options}
+              loading={entryStatus.isLoading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <AutocompleteField
+              label="Categoria"
+              size="small"
+              emptyLabel="Todas"
+              value={filters.type}
+              onChange={(v) => setFilter('type', v)}
+              options={activeCategories.map((cat) => ({
+                value: cat.slug,
+                label: cat.name,
+                description: cat.group_name,
+              }))}
+            />
+          </Grid>
+        </Grid>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -1542,222 +1485,234 @@ export default function DespesasPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Data</TableCell>
-                  <TableCell>Membro</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Fornecedor</TableCell>
-                  <TableCell align="right">Valor</TableCell>
-                  <TableCell align="right">Pago</TableCell>
-                  <TableCell>Recorrência</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {entries.map((e) => {
-                  const isInvoice = (e.type as string | null | undefined) === 'cartao'
-                  const expandable = isInvoice || Boolean(e.fiscal_document_id)
-                  const isOpen = expandedId === e.id
-                  return (
-                  <Fragment key={e.id}>
-                  <TableRow hover>
-                    <TableCell>
-                      <Stack direction="row" alignItems="center" spacing={0.5}>
-                        {expandable ? (
-                          <IconButton
-                            size="small"
-                            onClick={() => setExpandedId(isOpen ? null : e.id)}
-                          >
-                            {isOpen ? (
-                              <KeyboardArrowUpRoundedIcon fontSize="small" />
-                            ) : (
-                              <KeyboardArrowDownRoundedIcon fontSize="small" />
-                            )}
-                          </IconButton>
-                        ) : null}
-                        <span>{formatDateBR(e.due_date)}</span>
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{memberName(e.family_member_id)}</TableCell>
-                    <TableCell>{categoryName(e.type)}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {supplierName(e.supplier_id) ?? '—'}
-                    </TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>
-                      {formatCents(e.amount_cents)}
-                      {e.discount_cents ? (
-                        <Tooltip
-                          title={`Desconto: ${discountReasonName(e.discount_reason)} — pago ${formatCents(e.paid_amount_cents ?? e.amount_cents - e.discount_cents)}`}
-                        >
-                          <Typography
-                            variant="caption"
-                            display="block"
-                            sx={{ color: 'success.main', fontWeight: 600 }}
-                          >
-                            −{formatCents(e.discount_cents)}
-                          </Typography>
-                        </Tooltip>
-                      ) : null}
-                      {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
-                        <Tooltip
-                          title={`Juros e multa: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — pago ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
-                        >
-                          <Typography
-                            variant="caption"
-                            display="block"
-                            sx={{ color: 'warning.main', fontWeight: 600 }}
-                          >
-                            +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
-                          </Typography>
-                        </Tooltip>
-                      ) : null}
-                    </TableCell>
-                    <TableCell align="right">
-                      {e.status === 'realizada' ? (
+          <DataTable
+            rows={entries}
+            getRowKey={(e) => e.id}
+            size="medium"
+            leading={(e) => {
+              const isInvoice = (e.type as string | null | undefined) === 'cartao'
+              const expandable = isInvoice || Boolean(e.fiscal_document_id)
+              if (!expandable) return null
+              const isOpen = expandedId === e.id
+              return (
+                <IconButton
+                  size="small"
+                  aria-label={isOpen ? 'Recolher detalhes' : 'Ver detalhes'}
+                  onClick={() => setExpandedId(isOpen ? null : e.id)}
+                >
+                  {isOpen ? (
+                    <KeyboardArrowUpRoundedIcon fontSize="small" />
+                  ) : (
+                    <KeyboardArrowDownRoundedIcon fontSize="small" />
+                  )}
+                </IconButton>
+              )
+            }}
+            renderDetail={(e) =>
+              expandedId === e.id ? <ExpenseDetailRow entry={e} categoryLabel={categoryName} /> : null
+            }
+            columns={[
+              {
+                key: 'description',
+                header: 'Descrição',
+                mobile: 'title',
+                mobileOnly: true,
+                render: (e) => e.description || categoryName(e.type),
+              },
+              { key: 'due', header: 'Data', mobileLabel: 'Vence', render: (e) => formatDateBR(e.due_date) },
+              { key: 'member', header: 'Membro', render: (e) => memberName(e.family_member_id) },
+              { key: 'category', header: 'Categoria', render: (e) => categoryName(e.type) },
+              {
+                key: 'supplier',
+                header: 'Fornecedor',
+                cellSx: { color: 'text.secondary' },
+                render: (e) => supplierName(e.supplier_id) ?? '—',
+              },
+              {
+                key: 'amount',
+                header: 'Valor',
+                align: 'right',
+                mobile: 'value',
+                cellSx: { fontWeight: 700 },
+                render: (e) => (
+                  <>
+                    {formatCents(e.amount_cents)}
+                    {e.discount_cents ? (
+                      <Tooltip
+                        title={`Desconto: ${discountReasonName(e.discount_reason)} — pago ${formatCents(e.paid_amount_cents ?? e.amount_cents - e.discount_cents)}`}
+                      >
                         <Typography
-                          variant="body2"
-                          sx={{
-                            fontWeight: 700,
-                            color:
-                              (e.paid_amount_cents ?? e.amount_cents) < e.amount_cents
-                                ? 'info.main'
-                                : 'success.main',
-                          }}
+                          variant="caption"
+                          display="block"
+                          sx={{ color: 'success.main', fontWeight: 600 }}
                         >
-                          {formatCents(e.paid_amount_cents ?? e.amount_cents)}
+                          −{formatCents(e.discount_cents)}
                         </Typography>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          —
+                      </Tooltip>
+                    ) : null}
+                    {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
+                      <Tooltip
+                        title={`Juros e multa: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — pago ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
+                      >
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{ color: 'warning.main', fontWeight: 600 }}
+                        >
+                          +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
                         </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {e.parent_id ? (
-                        <Tooltip title="Compra dentro de uma fatura de cartão">
-                          <Chip size="small" variant="outlined" color="info" label="Fatura" />
-                        </Tooltip>
-                      ) : e.residual_of_id ? (
-                        <Tooltip title="Saldo não pago de um pagamento parcial">
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            color="warning"
-                            icon={<CallSplitRoundedIcon />}
-                            label="Residual"
-                          />
-                        </Tooltip>
-                      ) : e.fiscal_document_id ? (
-                        <Tooltip title="Cupom/nota fiscal vinculado — expanda para ver os itens">
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            color="success"
-                            icon={<ReceiptRoundedIcon />}
-                            label="Cupom"
-                          />
-                        </Tooltip>
-                      ) : e.installment_total ? (
+                      </Tooltip>
+                    ) : null}
+                  </>
+                ),
+              },
+              {
+                key: 'paid',
+                header: 'Pago',
+                align: 'right',
+                mobileLabel: 'Pago',
+                render: (e) =>
+                  e.status === 'realizada' ? (
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          fontWeight: 700,
+                          color:
+                            (e.paid_amount_cents ?? e.amount_cents) < e.amount_cents
+                              ? 'info.main'
+                              : 'success.main',
+                        }}
+                      >
+                        {formatCents(e.paid_amount_cents ?? e.amount_cents)}
+                      </Typography>
+                    ) : (
+                      '—'
+                    ),
+              },
+              {
+                key: 'recurrence',
+                header: 'Recorrência',
+                render: (e) =>
+                  e.parent_id ? (
+                      <Tooltip title="Compra dentro de uma fatura de cartão">
+                        <Chip size="small" variant="outlined" color="info" label="Fatura" />
+                      </Tooltip>
+                    ) : e.residual_of_id ? (
+                      <Tooltip title="Saldo não pago de um pagamento parcial">
                         <Chip
                           size="small"
                           variant="outlined"
-                          label={`${e.installment_number ?? '?'}/${e.installment_total}`}
+                          color="warning"
+                          icon={<CallSplitRoundedIcon />}
+                          label="Residual"
                         />
-                      ) : e.recurrence !== 'none' ? (
+                      </Tooltip>
+                    ) : e.fiscal_document_id ? (
+                      <Tooltip title="Cupom/nota fiscal vinculado — expanda para ver os itens">
                         <Chip
                           size="small"
                           variant="outlined"
-                          icon={<RepeatRoundedIcon />}
-                          label={recurrence.labelOf(e.recurrence)}
+                          color="success"
+                          icon={<ReceiptRoundedIcon />}
+                          label="Cupom"
                         />
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell>
+                      </Tooltip>
+                    ) : e.installment_total ? (
                       <Chip
                         size="small"
-                        label={entryStatus.labelOf(e.status)}
-                        color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
+                        variant="outlined"
+                        label={`${e.installment_number ?? '?'}/${e.installment_total}`}
                       />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Ver todos os dados">
-                        <IconButton size="small" onClick={() => setToDetail(e)}>
-                          <VisibilityRoundedIcon fontSize="small" />
+                    ) : e.recurrence !== 'none' ? (
+                      <Chip
+                        size="small"
+                        variant="outlined"
+                        icon={<RepeatRoundedIcon />}
+                        label={recurrence.labelOf(e.recurrence)}
+                      />
+                    ) : (
+                      '—'
+                    ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (e) => (
+                  <Chip
+                    size="small"
+                    label={entryStatus.labelOf(e.status)}
+                    color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (e) => (
+                  <>
+                    <Tooltip title="Ver todos os dados">
+                      <IconButton size="small" onClick={() => setToDetail(e)}>
+                        <VisibilityRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    {e.status === 'prevista' && (
+                      <Tooltip title="Confirmar pagamento">
+                        <IconButton
+                          size="small"
+                          color="success"
+                          onClick={() => setToConfirm(e)}
+                        >
+                          <CheckCircleRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {e.status === 'prevista' && (
-                        <Tooltip title="Confirmar pagamento">
-                          <IconButton
-                            size="small"
-                            color="success"
-                            onClick={() => setToConfirm(e)}
-                          >
-                            <CheckCircleRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {e.status === 'realizada' && (
-                        <Tooltip title="Desfazer pagamento">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            disabled={reopenMutation.isPending}
-                            onClick={() => setToReopen(e)}
-                          >
-                            <UndoRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(e)}>
-                          <EditRoundedIcon fontSize="small" />
+                    )}
+                    {e.status === 'realizada' && (
+                      <Tooltip title="Desfazer pagamento">
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          disabled={reopenMutation.isPending}
+                          onClick={() => setToReopen(e)}
+                        >
+                          <UndoRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {e.status === 'prevista' && (
-                        <Tooltip title="Não houve cobrança neste mês">
-                          <IconButton size="small" onClick={() => setToWaive(e)}>
-                            <MoneyOffRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {e.status !== 'cancelada' && (
-                        <Tooltip title="Cancelar">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            onClick={() => setToCancel(e)}
-                          >
-                            <CancelRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(e)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
+                    )}
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(e)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    {e.status === 'prevista' && (
+                      <Tooltip title="Não houve cobrança neste mês">
+                        <IconButton size="small" onClick={() => setToWaive(e)}>
+                          <MoneyOffRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                  {expandable && (
-                    <ExpenseDetailRow
-                      entry={e}
-                      colSpan={8}
-                      open={isOpen}
-                      categoryLabel={categoryName}
-                    />
-                  )}
-                  </Fragment>
-                  )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    )}
+                    {e.status !== 'cancelada' && (
+                      <Tooltip title="Cancelar">
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => setToCancel(e)}
+                        >
+                          <CancelRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(e)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <Divider />
           <TablePaginationBR
             total={data?.total ?? 0}
@@ -1769,11 +1724,11 @@ export default function DespesasPage() {
         </Card>
       )}
 
-      {formOpen && (
+      {(formOpen || wantsNew) && (
         <EntryFormDialog
-          open={formOpen}
-          entry={editing}
-          onClose={() => setFormOpen(false)}
+          open
+          entry={wantsNew ? null : editing}
+          onClose={closeForm}
           onCreatedRecurring={(count) =>
             show(`${count} lançamentos previstos criados até dezembro.`)
           }

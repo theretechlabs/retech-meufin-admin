@@ -6,7 +6,6 @@ import {
   CardContent,
   Chip,
   Grid,
-  Stack,
   Table,
   TableBody,
   TableCell,
@@ -45,53 +44,7 @@ import {
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
-
-type SvgIconComponent = React.ElementType
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-}: {
-  title: string
-  value: string
-  icon: SvgIconComponent
-  color?: string
-}) {
-  const theme = useTheme()
-  const c = color ?? theme.palette.primary.main
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h5" fontWeight={800}>
-              {value}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: alpha(c, 0.12),
-              color: c,
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
-}
+import { StatCard } from '@/components/common/StatCard'
 
 // Cores estáveis por tipo de imposto para as séries de inflação.
 const SERIES_COLORS = ['#1976d2', '#2e7d32', '#ed6c02', '#9c27b0', '#d32f2f', '#0288d1', '#7b1fa2', '#5d4037']
@@ -182,32 +135,32 @@ export default function PatrimonyDashboardPage() {
       />
 
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Imóveis"
+            label="Imóveis"
             value={String(overview.total_properties)}
             icon={HomeWorkRoundedIcon}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Valor patrimonial"
+            label="Valor patrimonial"
             value={formatCents(overview.total_property_value)}
             icon={AccountBalanceRoundedIcon}
             color="#2e7d32"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title={`Impostos ${currentYear}`}
+            label={`Impostos ${currentYear}`}
             value={`${formatCents(thisYearTotals?.paid_cents ?? 0)} / ${formatCents(thisYearTotals?.planned_cents ?? 0)}`}
             icon={RequestQuoteRoundedIcon}
             color="#0288d1"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Vencidos"
+            label="Vencidos"
             value={String(overview.overdue.length)}
             icon={WarningAmberRoundedIcon}
             color={overview.overdue.length > 0 ? '#d32f2f' : '#757575'}

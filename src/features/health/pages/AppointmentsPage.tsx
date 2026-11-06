@@ -1,10 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  alpha,
-  Box,
   Button,
   Card,
-  CardContent,
   Chip,
   Dialog,
   DialogActions,
@@ -14,12 +11,6 @@ import {
   Grid,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -61,7 +52,10 @@ import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { StatCard } from '@/components/common/StatCard'
 
 // Lê a data/hora ISO (armazenada em UTC) preservando o horário informado.
 function fmtDateTime(iso?: string | null): string {
@@ -82,50 +76,6 @@ function fmtDateTime(iso?: string | null): string {
 function toInputValue(iso?: string | null): string {
   if (!iso) return ''
   return iso.slice(0, 16)
-}
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-}: {
-  title: string
-  value: number | string
-  icon: typeof EventAvailableRoundedIcon
-}) {
-  return (
-    <Card>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-          <Box>
-            <Typography variant="body2" color="text.secondary" fontWeight={600}>
-              {title}
-            </Typography>
-            <Typography
-              variant="h5"
-              sx={{ fontFamily: (t) => t.typography.h5.fontFamily, fontWeight: 800, mt: 0.5 }}
-            >
-              {value}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.15 : 0.12),
-              color: 'primary.main',
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
 }
 
 function StatusChip({ status }: { status: AppointmentStatus }) {
@@ -548,25 +498,27 @@ export default function AppointmentsPage() {
       />
 
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Próximos 7 dias" value={agenda?.next_7_count ?? 0} icon={EventAvailableRoundedIcon} />
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard label="Próximos 7 dias" value={agenda?.next_7_count ?? 0} icon={EventAvailableRoundedIcon} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Agendadas no ano" value={statusCount('agendada')} icon={CalendarMonthRoundedIcon} />
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard label="Agendadas no ano" value={statusCount('agendada')} icon={CalendarMonthRoundedIcon} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <StatCard title="Realizadas no ano" value={statusCount('realizada')} icon={TaskAltRoundedIcon} />
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard label="Realizadas no ano" value={statusCount('realizada')} icon={TaskAltRoundedIcon} />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
           <StatCard
-            title="Gasto no ano"
+            label="Gasto no ano"
             value={formatCents(agenda?.year_spend_cents ?? 0)}
             icon={PaidRoundedIcon}
           />
         </Grid>
       </Grid>
 
-      <Card sx={{ p: 2, mb: 2 }}>
+      <FilterBar
+        activeCount={[memberId, status, kind, from, to].filter(Boolean).length}
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2} flexWrap="wrap" useFlexGap>
           <AutocompleteField
             label="Membro"
@@ -617,7 +569,7 @@ export default function AppointmentsPage() {
             InputLabelProps={{ shrink: true }}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -640,112 +592,115 @@ export default function AppointmentsPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Data / hora</TableCell>
-                  <TableCell>Membro</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Especialidade</TableCell>
-                  <TableCell>Profissional / Local</TableCell>
-                  <TableCell>Cobertura</TableCell>
-                  <TableCell align="right">Valor</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((a) => {
+          <DataTable
+            rows={items}
+            getRowKey={(a) => a.id}
+            size="medium"
+            columns={[
+              {
+                key: 'when',
+                header: 'Data / hora',
+                mobile: 'value',
+                cellSx: { whiteSpace: 'nowrap', fontWeight: 600 },
+                render: (a) => fmtDateTime(a.scheduled_at),
+              },
+              { key: 'member', header: 'Membro', mobile: 'title', render: (a) => a.member_name ?? '—' },
+              {
+                key: 'kind',
+                header: 'Tipo',
+                render: (a) => <Chip size="small" variant="outlined" label={appointmentKind.labelOf(a.kind)} />,
+              },
+              { key: 'specialty', header: 'Especialidade', render: (a) => specialty.labelOf(a.specialty) },
+              {
+                key: 'professional',
+                header: 'Profissional / Local',
+                render: (a) => (
+                  <Stack spacing={0.25} component="span" sx={{ display: 'inline-flex' }}>
+                    <span>{a.professional_name || '—'}</span>
+                    {a.lab_name && (
+                      <Typography component="span" variant="caption" color="text.secondary">
+                        {a.lab_name}
+                      </Typography>
+                    )}
+                  </Stack>
+                ),
+              },
+              {
+                key: 'coverage',
+                header: 'Cobertura',
+                render: (a) =>
+                  a.plan_id ? (
+                    <Chip size="small" color="info" variant="outlined" label={a.plan_name ?? 'Plano'} />
+                  ) : (
+                    <Chip size="small" variant="outlined" label="Particular" />
+                  ),
+              },
+              {
+                key: 'price',
+                header: 'Valor',
+                align: 'right',
+                mobileLabel: 'Valor',
+                render: (a) => (a.price_cents ? formatCents(a.price_cents) : '—'),
+              },
+              { key: 'status', header: 'Status', render: (a) => <StatusChip status={a.status} /> },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (a) => {
                   const terminal =
                     a.status === 'realizada' || a.status === 'cancelada' || a.status === 'faltou'
                   return (
-                    <TableRow key={a.id} hover>
-                      <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 600 }}>
-                        {fmtDateTime(a.scheduled_at)}
-                      </TableCell>
-                      <TableCell>{a.member_name ?? '—'}</TableCell>
-                      <TableCell>
-                        <Chip
+                    <Stack direction="row" justifyContent="flex-end">
+                    {a.status === 'agendada' && (
+                      <Tooltip title="Confirmar">
+                        <IconButton
                           size="small"
-                          variant="outlined"
-                          label={appointmentKind.labelOf(a.kind)}
-                        />
-                      </TableCell>
-                      <TableCell>{specialty.labelOf(a.specialty)}</TableCell>
-                      <TableCell>
-                        <Stack spacing={0.25}>
-                          <span>{a.professional_name || '—'}</span>
-                          {a.lab_name && (
-                            <Typography variant="caption" color="text.secondary">
-                              {a.lab_name}
-                            </Typography>
-                          )}
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        {a.plan_id ? (
-                          <Chip size="small" color="info" variant="outlined" label={a.plan_name ?? 'Plano'} />
-                        ) : (
-                          <Chip size="small" variant="outlined" label="Particular" />
-                        )}
-                      </TableCell>
-                      <TableCell align="right">{a.price_cents ? formatCents(a.price_cents) : '—'}</TableCell>
-                      <TableCell>
-                        <StatusChip status={a.status} />
-                      </TableCell>
-                      <TableCell align="right">
-                        <Stack direction="row" justifyContent="flex-end">
-                          {a.status === 'agendada' && (
-                            <Tooltip title="Confirmar">
-                              <IconButton
-                                size="small"
-                                color="primary"
-                                onClick={() => confirmMut.mutate(a.id)}
-                              >
-                                <CheckCircleRoundedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {!terminal && (
-                            <Tooltip title="Marcar realizada">
-                              <IconButton size="small" color="success" onClick={() => setCompleting(a)}>
-                                <TaskAltRoundedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {!terminal && (
-                            <Tooltip title="Faltou">
-                              <IconButton size="small" color="warning" onClick={() => noShowMut.mutate(a.id)}>
-                                <PersonOffRoundedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          {!terminal && (
-                            <Tooltip title="Cancelar">
-                              <IconButton size="small" onClick={() => cancelMut.mutate(a.id)}>
-                                <CancelRoundedIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          )}
-                          <Tooltip title="Editar">
-                            <IconButton size="small" onClick={() => openEdit(a)}>
-                              <EditRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Excluir">
-                            <IconButton size="small" color="error" onClick={() => setToDelete(a)}>
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </Stack>
-                      </TableCell>
-                    </TableRow>
+                          color="primary"
+                          onClick={() => confirmMut.mutate(a.id)}
+                        >
+                          <CheckCircleRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {!terminal && (
+                      <Tooltip title="Marcar realizada">
+                        <IconButton size="small" color="success" onClick={() => setCompleting(a)}>
+                          <TaskAltRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {!terminal && (
+                      <Tooltip title="Faltou">
+                        <IconButton size="small" color="warning" onClick={() => noShowMut.mutate(a.id)}>
+                          <PersonOffRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {!terminal && (
+                      <Tooltip title="Cancelar">
+                        <IconButton size="small" onClick={() => cancelMut.mutate(a.id)}>
+                          <CancelRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(a)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(a)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    </Stack>
                   )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                },
+              },
+            ]}
+          />
         </Card>
       )}
 

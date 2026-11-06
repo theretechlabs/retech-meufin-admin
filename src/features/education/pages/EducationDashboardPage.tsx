@@ -14,7 +14,6 @@ import {
   TableHead,
   TableRow,
   Typography,
-  alpha,
   useTheme,
 } from '@mui/material'
 import PaidRoundedIcon from '@mui/icons-material/PaidRounded'
@@ -50,61 +49,7 @@ import { EmptyState, ErrorState, LoadingState } from '@/features/health/componen
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
 import { useSchoolYears } from '../hooks/useSchoolYears'
-
-
-type SvgIconComponent = React.ElementType
-
-function StatCard({
-  title,
-  value,
-  caption,
-  icon: Icon,
-  color,
-}: {
-  title: string
-  value: string
-  caption?: string
-  icon: SvgIconComponent
-  color?: string
-}) {
-  const theme = useTheme()
-  const c = color ?? theme.palette.primary.main
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack direction="row" alignItems="center" justifyContent="space-between">
-          <Box>
-            <Typography variant="body2" color="text.secondary" gutterBottom>
-              {title}
-            </Typography>
-            <Typography variant="h5" fontWeight={800}>
-              {value}
-            </Typography>
-            {caption && (
-              <Typography variant="caption" color="text.secondary">
-                {caption}
-              </Typography>
-            )}
-          </Box>
-          <Box
-            sx={{
-              width: 52,
-              height: 52,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: alpha(c, 0.12),
-              color: c,
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
-}
+import { StatCard } from '@/components/common/StatCard'
 
 /** Reais (não centavos) para os eixos dos gráficos. */
 function centsToReaisNum(cents: number): number {
@@ -193,37 +138,37 @@ export default function EducationDashboardPage() {
       ) : (
         <>
           <Grid container spacing={2.5} sx={{ mb: 3 }}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Gasto total no ano"
+                label="Gasto total no ano"
                 value={formatCents(totalYearCents)}
-                caption="mensalidades + matrículas + material"
+                hint="mensalidades + matrículas + material"
                 icon={PaidRoundedIcon}
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Listas de material"
+                label="Listas de material"
                 value={String(data.list_count)}
-                caption={`${data.item_count} itens no total`}
+                hint={`${data.item_count} itens no total`}
                 icon={ListAltRoundedIcon}
                 color="#0288d1"
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title="Itens comprados"
+                label="Itens comprados"
                 value={formatPct(data.purchased_pct)}
-                caption={`${data.purchased_count} de ${data.item_count}`}
+                hint={`${data.purchased_count} de ${data.item_count}`}
                 icon={CheckCircleOutlineRoundedIcon}
                 color="#2e7d32"
               />
             </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
               <StatCard
-                title={data.savings_cents >= 0 ? 'Economia vs referência' : 'Estouro vs referência'}
+                label={data.savings_cents >= 0 ? 'Economia vs referência' : 'Estouro vs referência'}
                 value={formatCents(Math.abs(data.savings_cents))}
-                caption={`${formatPct(Math.abs(data.savings_pct))} sobre o pesquisado`}
+                hint={`${formatPct(Math.abs(data.savings_pct))} sobre o pesquisado`}
                 icon={SavingsRoundedIcon}
                 color={data.savings_cents >= 0 ? '#2e7d32' : '#d32f2f'}
               />

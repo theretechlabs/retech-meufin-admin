@@ -4,9 +4,7 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
-  Collapse,
   Dialog,
   DialogActions,
   DialogContent,
@@ -16,12 +14,6 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -67,6 +59,8 @@ import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable, type DataColumn } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -417,30 +411,11 @@ function PurchaseFormDialog({
 // Linha de fatura (expandível com compras)
 // ---------------------------------------------------------------------------
 
-function PurchasesRow({
-  invoice,
-  cardName,
-  expanded,
-  onToggle,
-  onConfirm,
-  onReopen,
-  onDelete,
-  confirmPending,
-  reopenPending,
-}: {
-  invoice: Entry
-  cardName: string
-  expanded: boolean
-  onToggle: () => void
-  onConfirm: () => void
-  onReopen: () => void
-  onDelete: () => void
-  confirmPending: boolean
-  reopenPending: boolean
-}) {
+/** Detalhe expandido de uma fatura: compras (lista) + totais. Componente próprio
+ *  porque tem estado/queries por fatura — a DataTable só o renderiza via renderDetail. */
+function InvoicePurchases({ invoice }: { invoice: Entry }) {
   const qc = useQueryClient()
   const { show } = useToast()
-  const entryStatus = useCatalog('finance.entry_status')
   const { labelOf: expenseCategoryLabel } = useExpenseCategories()
   const [purchaseOpen, setPurchaseOpen] = useState(false)
   const [toDeletePurchase, setToDeletePurchase] = useState<Entry | null>(null)
@@ -449,7 +424,6 @@ function PurchasesRow({
   const purchasesQuery = useQuery({
     queryKey: financeKeys.entries({ parent_id: invoice.id }),
     queryFn: () => listEntries({ parent_id: invoice.id, kind: 'debit', limit: 500 }),
-    enabled: expanded,
   })
 
   const deletePurchase = useMutation({
@@ -464,175 +438,88 @@ function PurchasesRow({
   const purchases = purchasesQuery.data?.items ?? []
   const purchasesTotal = purchases.reduce((acc, p) => acc + p.amount_cents, 0)
 
-  const monthLabel =
-    MONTH_OPTIONS.find((m) => m.value === Number(invoice.due_date.slice(5, 7)))?.label ?? ''
-  const competencia = `${monthLabel}/${invoice.due_date.slice(0, 4)}`
-
-  return (
-    <>
-      <TableRow hover>
-        <TableCell>
-          <IconButton size="small" onClick={onToggle}>
-            {expanded ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
-          </IconButton>
-        </TableCell>
-        <TableCell sx={{ fontWeight: 600 }}>{cardName}</TableCell>
-        <TableCell>{competencia}</TableCell>
-        <TableCell>{formatDateBR(invoice.due_date)}</TableCell>
-        <TableCell align="right" sx={{ fontWeight: 700 }}>
-          {formatCents(invoice.amount_cents)}
-        </TableCell>
-        <TableCell>
-          {invoice.installment_total ? (
-            <Chip
-              size="small"
-              variant="outlined"
-              label={`${invoice.installment_number ?? '?'}/${invoice.installment_total}`}
-            />
-          ) : (
-            '—'
-          )}
-        </TableCell>
-        <TableCell>
-          <Chip
-            size="small"
-            label={entryStatus.labelOf(invoice.status)}
-            color={ENTRY_STATUS_COLOR[invoice.status] ?? 'default'}
-          />
-        </TableCell>
-        <TableCell align="right">
-          {invoice.status === 'prevista' && (
-            <Tooltip title="Confirmar (marcar como paga)">
-              <IconButton
-                size="small"
-                color="success"
-                disabled={confirmPending}
-                onClick={onConfirm}
-              >
-                <CheckCircleRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-          {invoice.status === 'realizada' && (
-            <Tooltip title="Desfazer pagamento">
-              <IconButton
-                size="small"
-                color="warning"
-                disabled={reopenPending}
-                onClick={onReopen}
-              >
-                <UndoRoundedIcon fontSize="small" />
-              </IconButton>
-            </Tooltip>
-          )}
-          <Tooltip title="Excluir fatura">
-            <IconButton size="small" color="error" onClick={onDelete}>
+  const purchaseColumns: DataColumn<Entry>[] = [
+    {
+      key: 'date',
+      header: 'Data da compra',
+      render: (p) => (p.purchase_date ? formatDateBR(p.purchase_date) : '—'),
+    },
+    { key: 'description', header: 'Descrição', mobile: 'title', render: (p) => p.description },
+    { key: 'category', header: 'Categoria', render: (p) => expenseCategoryLabel(p.type) },
+    {
+      key: 'amount',
+      header: 'Valor',
+      align: 'right',
+      mobile: 'value',
+      render: (p) => formatCents(p.amount_cents),
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      align: 'right',
+      mobile: 'actions',
+      render: (p) => (
+        <>
+          <Tooltip title="Editar compra">
+            <IconButton size="small" onClick={() => setToEditPurchase(p)}>
+              <EditRoundedIcon fontSize="small" />
+            </IconButton>
+          </Tooltip>
+          <Tooltip title="Excluir compra">
+            <IconButton size="small" color="error" onClick={() => setToDeletePurchase(p)}>
               <DeleteOutlineRoundedIcon fontSize="small" />
             </IconButton>
           </Tooltip>
-        </TableCell>
-      </TableRow>
-      <TableRow>
-        <TableCell colSpan={8} sx={{ py: 0, borderBottom: expanded ? undefined : 'none' }}>
-          <Collapse in={expanded} timeout="auto" unmountOnExit>
-            <Box sx={{ py: 2 }}>
-              <Stack
-                direction="row"
-                alignItems="center"
-                justifyContent="space-between"
-                sx={{ mb: 1.5 }}
-              >
-                <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
-                  Compras da fatura
-                </Typography>
-                <Button
-                  size="small"
-                  variant="outlined"
-                  startIcon={<AddRoundedIcon />}
-                  onClick={() => setPurchaseOpen(true)}
-                >
-                  Adicionar compra
-                </Button>
-              </Stack>
+        </>
+      ),
+    },
+  ]
 
-              {purchasesQuery.isLoading ? (
-                <LoadingState />
-              ) : purchasesQuery.isError ? (
-                <ErrorState
-                  message={errorMessage(purchasesQuery.error)}
-                  onRetry={purchasesQuery.refetch}
-                />
-              ) : purchases.length === 0 ? (
-                <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                  Nenhuma compra lançada nesta fatura.
-                </Typography>
-              ) : (
-                <Table size="small">
-                  <TableHead>
-                    <TableRow>
-                      <TableCell>Data da compra</TableCell>
-                      <TableCell>Descrição</TableCell>
-                      <TableCell>Categoria</TableCell>
-                      <TableCell align="right">Valor</TableCell>
-                      <TableCell align="right">Ações</TableCell>
-                    </TableRow>
-                  </TableHead>
-                  <TableBody>
-                    {purchases.map((p) => (
-                      <TableRow key={p.id}>
-                        <TableCell>{p.purchase_date ? formatDateBR(p.purchase_date) : '—'}</TableCell>
-                        <TableCell>{p.description}</TableCell>
-                        <TableCell>
-                          {expenseCategoryLabel(p.type)}
-                        </TableCell>
-                        <TableCell align="right">{formatCents(p.amount_cents)}</TableCell>
-                        <TableCell align="right">
-                          <Tooltip title="Editar compra">
-                            <IconButton size="small" onClick={() => setToEditPurchase(p)}>
-                              <EditRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Excluir compra">
-                            <IconButton
-                              size="small"
-                              color="error"
-                              onClick={() => setToDeletePurchase(p)}
-                            >
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
+  return (
+    <Box sx={{ py: { xs: 1, sm: 2 }, pl: { xs: 0, sm: 2 } }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
+        <Typography variant="subtitle2" sx={{ fontWeight: 700 }}>
+          Compras da fatura
+        </Typography>
+        <Button
+          size="small"
+          variant="outlined"
+          startIcon={<AddRoundedIcon />}
+          onClick={() => setPurchaseOpen(true)}
+        >
+          Adicionar compra
+        </Button>
+      </Stack>
 
-              <Divider sx={{ mt: 1.5 }} />
-              <Stack direction="row" spacing={3} sx={{ pt: 1.5 }}>
-                <Typography variant="caption" color="text.secondary">
-                  Soma das compras: <strong>{formatCents(purchasesTotal)}</strong>
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  Valor da fatura: <strong>{formatCents(invoice.amount_cents)}</strong>
-                </Typography>
-                {purchases.length > 0 && purchasesTotal !== invoice.amount_cents && (
-                  <Typography variant="caption" color="warning.main">
-                    Diferença: {formatCents(Math.abs(purchasesTotal - invoice.amount_cents))}
-                  </Typography>
-                )}
-              </Stack>
-            </Box>
-          </Collapse>
-        </TableCell>
-      </TableRow>
+      {purchasesQuery.isLoading ? (
+        <LoadingState />
+      ) : purchasesQuery.isError ? (
+        <ErrorState message={errorMessage(purchasesQuery.error)} onRetry={purchasesQuery.refetch} />
+      ) : purchases.length === 0 ? (
+        <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
+          Nenhuma compra lançada nesta fatura.
+        </Typography>
+      ) : (
+        <DataTable rows={purchases} columns={purchaseColumns} getRowKey={(p) => p.id} />
+      )}
+
+      <Divider sx={{ mt: 1.5 }} />
+      <Stack direction="row" spacing={3} flexWrap="wrap" useFlexGap sx={{ pt: 1.5 }}>
+        <Typography variant="caption" color="text.secondary">
+          Soma das compras: <strong>{formatCents(purchasesTotal)}</strong>
+        </Typography>
+        <Typography variant="caption" color="text.secondary">
+          Valor da fatura: <strong>{formatCents(invoice.amount_cents)}</strong>
+        </Typography>
+        {purchases.length > 0 && purchasesTotal !== invoice.amount_cents && (
+          <Typography variant="caption" color="warning.main">
+            Diferença: {formatCents(Math.abs(purchasesTotal - invoice.amount_cents))}
+          </Typography>
+        )}
+      </Stack>
 
       {purchaseOpen && (
-        <PurchaseFormDialog
-          open={purchaseOpen}
-          invoice={invoice}
-          onClose={() => setPurchaseOpen(false)}
-        />
+        <PurchaseFormDialog open={purchaseOpen} invoice={invoice} onClose={() => setPurchaseOpen(false)} />
       )}
 
       <ConfirmDialog
@@ -647,8 +534,14 @@ function PurchasesRow({
       {toEditPurchase && (
         <PurchaseEditDialog purchase={toEditPurchase} onClose={() => setToEditPurchase(null)} />
       )}
-    </>
+    </Box>
   )
+}
+
+function invoiceCompetencia(invoice: Entry): string {
+  const monthLabel =
+    MONTH_OPTIONS.find((m) => m.value === Number(invoice.due_date.slice(5, 7)))?.label ?? ''
+  return `${monthLabel}/${invoice.due_date.slice(0, 4)}`
 }
 
 // ---------------------------------------------------------------------------
@@ -657,6 +550,7 @@ function PurchasesRow({
 
 export default function FaturasPage() {
   const yearsList = useYearOptions()
+  const entryStatus = useCatalog('finance.entry_status')
   const qc = useQueryClient()
   const { show } = useToast()
   const [filters, setFilters] = useState<Filters>(initialFilters)
@@ -771,61 +665,61 @@ export default function FaturasPage() {
       )}
 
       {/* Filtros */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <TextField
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setPage(0)
-                }}
-                placeholder="Buscar por descrição…"
-                size="small"
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRoundedIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <AutocompleteField
-                label="Cartão"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.card_id}
-                onChange={(v) => setFilter('card_id', v)}
-                options={cards.map((c) => ({ value: c.id, label: c.name }))}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Mês"
-                size="small"
-                value={String(filters.month)}
-                onChange={(v) => setFilter('month', Number(v))}
-                options={numericOptions(MONTH_OPTIONS)}
-                disableClearable
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Ano"
-                size="small"
-                value={String(filters.year)}
-                onChange={(v) => setFilter('year', Number(v))}
-                options={numericOptions(yearsList)}
-                disableClearable
-              />
-            </Grid>
+      <FilterBar
+        activeCount={filters.card_id ? 1 : 0}
+        primary={
+          <TextField
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setPage(0)
+            }}
+            placeholder="Buscar por descrição…"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      >
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 4 }}>
+            <AutocompleteField
+              label="Cartão"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.card_id}
+              onChange={(v) => setFilter('card_id', v)}
+              options={cards.map((c) => ({ value: c.id, label: c.name }))}
+            />
           </Grid>
-        </CardContent>
-      </Card>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Mês"
+              size="small"
+              value={String(filters.month)}
+              onChange={(v) => setFilter('month', Number(v))}
+              options={numericOptions(MONTH_OPTIONS)}
+              disableClearable
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Ano"
+              size="small"
+              value={String(filters.year)}
+              onChange={(v) => setFilter('year', Number(v))}
+              options={numericOptions(yearsList)}
+              disableClearable
+            />
+          </Grid>
+        </Grid>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -849,38 +743,109 @@ export default function FaturasPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 48 }} />
-                  <TableCell>Cartão</TableCell>
-                  <TableCell>Competência</TableCell>
-                  <TableCell>Vencimento</TableCell>
-                  <TableCell align="right">Valor</TableCell>
-                  <TableCell>Parcela</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {invoices.map((inv) => (
-                  <PurchasesRow
-                    key={inv.id}
-                    invoice={inv}
-                    cardName={cardName(inv.card_id)}
-                    expanded={expanded === inv.id}
-                    onToggle={() => setExpanded((cur) => (cur === inv.id ? null : inv.id))}
-                    onConfirm={() => confirmMutation.mutate(inv.id)}
-                    onReopen={() => setToReopen(inv)}
-                    onDelete={() => setToDelete(inv)}
-                    confirmPending={confirmMutation.isPending}
-                    reopenPending={reopenMutation.isPending}
+          <DataTable
+            rows={invoices}
+            getRowKey={(inv) => inv.id}
+            size="medium"
+            leading={(inv) => (
+              <IconButton
+                size="small"
+                aria-label={expanded === inv.id ? 'Recolher compras' : 'Ver compras'}
+                onClick={() => setExpanded((cur) => (cur === inv.id ? null : inv.id))}
+              >
+                {expanded === inv.id ? <KeyboardArrowUpRoundedIcon /> : <KeyboardArrowDownRoundedIcon />}
+              </IconButton>
+            )}
+            renderDetail={(inv) => (expanded === inv.id ? <InvoicePurchases invoice={inv} /> : null)}
+            columns={[
+              {
+                key: 'card',
+                header: 'Cartão',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (inv) => cardName(inv.card_id),
+              },
+              { key: 'competencia', header: 'Competência', render: (inv) => invoiceCompetencia(inv) },
+              {
+                key: 'due',
+                header: 'Vencimento',
+                mobileLabel: 'Vence',
+                render: (inv) => formatDateBR(inv.due_date),
+              },
+              {
+                key: 'amount',
+                header: 'Valor',
+                align: 'right',
+                mobile: 'value',
+                cellSx: { fontWeight: 700 },
+                render: (inv) => formatCents(inv.amount_cents),
+              },
+              {
+                key: 'installment',
+                header: 'Parcela',
+                render: (inv) =>
+                  inv.installment_total ? (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      label={`${inv.installment_number ?? '?'}/${inv.installment_total}`}
+                    />
+                  ) : (
+                    '—'
+                  ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (inv) => (
+                  <Chip
+                    size="small"
+                    label={entryStatus.labelOf(inv.status)}
+                    color={ENTRY_STATUS_COLOR[inv.status] ?? 'default'}
                   />
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (inv) => (
+                  <>
+                    {inv.status === 'prevista' && (
+                      <Tooltip title="Confirmar (marcar como paga)">
+                        <IconButton
+                          size="small"
+                          color="success"
+                          disabled={confirmMutation.isPending}
+                          onClick={() => confirmMutation.mutate(inv.id)}
+                        >
+                          <CheckCircleRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {inv.status === 'realizada' && (
+                      <Tooltip title="Desfazer pagamento">
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          disabled={reopenMutation.isPending}
+                          onClick={() => setToReopen(inv)}
+                        >
+                          <UndoRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Excluir fatura">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(inv)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <Divider />
           <Stack
             direction="row"
