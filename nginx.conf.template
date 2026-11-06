@@ -55,6 +55,16 @@ server {
         try_files $uri $uri/ /index.html;
     }
 
+    # PWA: service worker e manifest nunca em cache (o SW controla a atualização
+    # do app; se ficasse 1 ano em cache, o usuário não receberia deploy novo).
+    # Precisa vir antes do bloco de assets: nginx usa a primeira regex que casar.
+    location ~* ^/(sw\.js|registerSW\.js|workbox-.*\.js|manifest\.webmanifest)$ {
+        expires -1;
+        add_header Cache-Control "no-cache, must-revalidate, max-age=0";
+        add_header X-Content-Type-Options "nosniff" always;
+        types { application/javascript js; application/manifest+json webmanifest; }
+    }
+
     # Cache static assets
     location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$ {
         expires 1y;
