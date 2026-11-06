@@ -1,27 +1,32 @@
-import { useState, type ReactNode } from 'react'
+import { useMemo, useState, type ReactNode } from 'react'
 import {
   alpha,
   Box,
   ButtonBase,
   Collapse,
   Divider,
+  IconButton,
+  InputAdornment,
   List,
   ListItem,
   ListItemButton,
   ListItemIcon,
   ListItemText,
   Popover,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import ExpandMoreRoundedIcon from '@mui/icons-material/ExpandMoreRounded'
+import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
+import CloseRoundedIcon from '@mui/icons-material/CloseRounded'
 import { Link as RouterLink, useLocation } from 'react-router-dom'
 import { AppLogo } from './AppLogo'
 import { SidebarUserCard } from './SidebarUserCard'
 import { MenuInfoPopover } from './MenuInfoPopover'
 import { lp } from '@/theme/tokens'
 import { retechfinNavSections } from '@/layouts/nav-config-retechfin'
-import { useFilteredNavData, type NavDataItem } from '@/layouts/components/nav-filter-by-casl'
+import { useFilteredNavData, type NavDataItem, type NavDataSection } from '@/layouts/components/nav-filter-by-casl'
 
 /** Padding horizontal do conteúdo; à direita um pouco maior para o logo não colar na borda */
 const drawerPaddingX = { pl: 0.5, pr: 3.5 } as const
@@ -102,6 +107,50 @@ function CollapsedFlyout({
   )
 }
 
+/** Sem acento, minúsculo: "Saúde" casa com "saude". */
+function normalize(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+}
+
+/** Subsequência: "dfin" casa "dashboard financeira" (letras na ordem, com pulos). */
+function isSubsequence(needle: string, hay: string): boolean {
+  let i = 0
+  for (const ch of hay) {
+    if (ch === needle[i]) i++
+    if (i === needle.length) return true
+  }
+  return needle.length === 0
+}
+
+function itemMatches(item: NavDataItem, section: string, tokens: string[]): boolean {
+  const label = normalize(item.label)
+  const hay = `${label} ${normalize(section)} ${normalize(item.path.replace(/[/-]/g, ' '))}`
+  return tokens.every((t) => hay.includes(t) || isSubsequence(t, label))
+}
+
+/**
+ * Filtra o menu pelo texto digitado. Item casa por rótulo, nome da seção ou
+ * rota; pai que casa leva os filhos todos, senão só os filhos que casam.
+ */
+function filterSections(sections: NavDataSection[], query: string): NavDataSection[] {
+  const tokens = normalize(query).split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return sections
+  return sections
+    .map((section) => {
+      const sub = section.subheader ?? ''
+      const items = section.items.flatMap((item) => {
+        if (itemMatches(item, sub, tokens)) return [item]
+        const children = (item.children ?? []).filter((c) => itemMatches(c, sub, tokens))
+        return children.length ? [{ ...item, children }] : []
+      })
+      return { ...section, items }
+    })
+    .filter((s) => s.items.length > 0)
+}
+
 const NAV_COLLAPSED_KEY = 'meufin-nav-collapsed-sections'
 
 function loadCollapsedSections(): Record<string, boolean> {
@@ -114,7 +163,10 @@ function loadCollapsedSections(): Record<string, boolean> {
 
 export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () => void; collapsed?: boolean }) {
   const { pathname } = useLocation()
-  const sections = useFilteredNavData(retechfinNavSections)
+  const allSections = useFilteredNavData(retechfinNavSections)
+  const [query, setQuery] = useState('')
+  const filtering = query.trim().length > 0
+  const sections = useMemo(() => filterSections(allSections, query), [allSections, query])
 
   // Seções fechadas pelo usuário (persistem entre sessões).
   const [closedSections, setClosedSections] = useState<Record<string, boolean>>(loadCollapsedSections)
@@ -252,10 +304,58 @@ export function SidebarNav({ onNavigate, collapsed = false }: { onNavigate?: () 
 
       {!collapsed && <SidebarUserCard />}
 
+      {!collapsed && (
+        <TextField
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Escape') setQuery('')
+          }}
+          placeholder="Filtrar menu"
+          aria-label="Filtrar itens do menu"
+          size="small"
+          fullWidth
+          autoComplete="off"
+          sx={{
+            mb: 1.5,
+            '& .MuiOutlinedInput-root': {
+              borderRadius: 2,
+              fontSize: 13,
+              bgcolor: 'transparent',
+              '& fieldset': { borderColor: 'transparent' },
+              '&:hover fieldset': { borderColor: 'divider' },
+              '&.Mui-focused fieldset': { borderColor: 'divider', borderWidth: 1 },
+            },
+            '& .MuiOutlinedInput-input': { py: 0.75 },
+          }}
+          slotProps={{
+            input: {
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon sx={{ fontSize: 18, color: 'text.disabled' }} />
+                </InputAdornment>
+              ),
+              endAdornment: filtering ? (
+                <InputAdornment position="end">
+                  <IconButton size="small" aria-label="Limpar filtro" onClick={() => setQuery('')} edge="end">
+                    <CloseRoundedIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </InputAdornment>
+              ) : null,
+            },
+          }}
+        />
+      )}
+
       <Box sx={scrollSx}>
+        {filtering && sections.length === 0 && (
+          <Typography variant="body2" sx={{ color: 'text.disabled', px: 1.5, py: 1 }}>
+            Nenhum item do menu para “{query.trim()}”.
+          </Typography>
+        )}
         {sections.map((section, i) => {
           const sectionKey = section.subheader ?? `section-${i}`
-          const isClosed = Boolean(section.subheader && closedSections[sectionKey])
+          const isClosed = !filtering && Boolean(section.subheader && closedSections[sectionKey])
           const activeInside = section.items.some((item) => !item.soon && pathname === item.path)
           return (
           <Box key={sectionKey}>
