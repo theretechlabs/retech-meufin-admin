@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Fonte dos ícones PWA (quadrado, sem cantos arredondados: iOS/Android aplicam a própria máscara). -->
+  <defs>
+    <filter id="glow" x="-40%" y="-40%" width="180%" height="180%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="1.4" result="blur" />
+      <feMerge>
+        <feMergeNode in="blur" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  <rect width="32" height="32" fill="#050506" />
+  <rect width="32" height="32" fill="#00e676" fill-opacity="0.06" />
+  <g
+    stroke="#00e676"
+    stroke-width="2"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    fill="none"
+    filter="url(#glow)"
+  >
+    <path d="M6.5 14.4 16 6.6l9.5 7.8" />
+    <path d="M9 16.2v6.6a2.2 2.2 0 0 0 2.2 2.2h9.6a2.2 2.2 0 0 0 2.2-2.2v-6.6" />
+    <path d="m12.2 20.8 2.5-2.5 1.9 1.8 3.2-3.4" />
+    <path d="M17.6 16.7h2.2v2.2" />
+  </g>
+</svg>
