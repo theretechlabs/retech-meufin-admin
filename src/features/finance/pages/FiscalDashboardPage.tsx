@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import {
-  alpha,
   Box,
   Card,
   CardContent,
@@ -57,6 +56,7 @@ import { errorMessage } from '../constants'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { StatCard } from '@/components/common/StatCard'
 
 // Chaves de query locais (constants.ts é somente-leitura para esta feature).
 const fiscalKeys = {
@@ -93,50 +93,6 @@ const SORT_OPTIONS: { value: FiscalProductSort; label: string }[] = [
   { value: 'spend', label: 'Maior gasto' },
   { value: 'inflation', label: 'Maior inflação' },
 ]
-
-function StatCard({
-  title,
-  value,
-  icon: Icon,
-  tone = 'primary',
-}: {
-  title: string
-  value: string
-  icon: typeof ReceiptLongRoundedIcon
-  tone?: 'primary' | 'success' | 'error' | 'warning' | 'info'
-}) {
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" color="text.secondary" fontWeight={600} noWrap>
-              {title}
-            </Typography>
-            <Typography variant="h5" sx={{ fontWeight: 800, mt: 0.5, whiteSpace: 'nowrap' }}>
-              {value}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 44,
-              height: 44,
-              flexShrink: 0,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: (t) => alpha(t.palette[tone].main, t.palette.mode === 'dark' ? 0.18 : 0.12),
-              color: `${tone}.main`,
-            }}
-          >
-            <Icon fontSize="small" />
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
-}
 
 /** Chip de variação % com cor semântica: subiu = vermelho, caiu = verde. */
 function VariationChip({ pct }: { pct: number }) {
@@ -245,36 +201,32 @@ export default function FiscalDashboardPage() {
         />
       ) : (
         <Grid container spacing={2.5}>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
             <StatCard
-              title="Documentos fiscais"
+              label="Documentos fiscais"
               value={String(s?.documents ?? 0)}
               icon={ReceiptLongRoundedIcon}
-              tone="info"
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
             <StatCard
-              title="Itens comprados"
+              label="Itens comprados"
               value={String(s?.items ?? 0)}
               icon={Inventory2RoundedIcon}
-              tone="primary"
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
             <StatCard
-              title="Total gasto"
+              label="Total gasto"
               value={formatCents(s?.total_cents ?? 0)}
               icon={PaymentsRoundedIcon}
-              tone="error"
             />
           </Grid>
-          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
             <StatCard
-              title="Produtos distintos"
+              label="Produtos distintos"
               value={String(s?.products_count ?? 0)}
               icon={CategoryRoundedIcon}
-              tone="success"
             />
           </Grid>
 

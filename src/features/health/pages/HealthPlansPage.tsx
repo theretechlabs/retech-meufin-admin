@@ -15,12 +15,6 @@ import {
   IconButton,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -51,6 +45,7 @@ import {
   toCents,
 } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { DataTable } from '@/components/tables/DataTable'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -407,89 +402,113 @@ export default function HealthPlansPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Plano</TableCell>
-                  <TableCell>Operadora</TableCell>
-                  <TableCell>Modalidade</TableCell>
-                  <TableCell align="right">Mensalidade</TableCell>
-                  <TableCell>Membros</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {plans.map((p) => (
-                  <TableRow key={p.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      {p.name}
-                      {p.ans_code && (
-                        <Typography variant="caption" color="text.secondary" display="block">
-                          ANS {p.ans_code}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>{p.operator || '—'}</TableCell>
-                    <TableCell>
-                      <Chip size="small" variant="outlined" label={planType.labelOf(p.plan_type)} />
-                    </TableCell>
-                    <TableCell align="right">{formatCents(p.monthly_fee_cents)}</TableCell>
-                    <TableCell>
-                      {p.members?.length ? (
-                        <Tooltip
-                          title={p.members
-                            .map((m) => memberName(m.member_id) + (m.holder ? ' (titular)' : ''))
-                            .join(', ')}
-                        >
-                          <AvatarGroup max={4} sx={{ justifyContent: 'flex-start', '& .MuiAvatar-root': { width: 30, height: 30, fontSize: 13 } }}>
-                            {p.members.map((m) => (
-                              <Avatar key={m.id}>{initials(memberName(m.member_id))}</Avatar>
-                            ))}
-                          </AvatarGroup>
-                        </Tooltip>
-                      ) : (
-                        <Typography variant="body2" color="text.secondary">
-                          Sem membros
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={p.active ? 'Ativo' : 'Inativo'}
-                        color={p.active ? 'success' : 'default'}
-                        variant={p.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Membros">
-                        <IconButton size="small" onClick={() => setMembersOf(p)}>
-                          <GroupsRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Documentos">
-                        <IconButton size="small" onClick={() => setDocsOf(p)}>
-                          <DescriptionRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(p)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(p)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={plans}
+            getRowKey={(p) => p.id}
+            size="medium"
+            columns={[
+              {
+                key: 'name',
+                header: 'Plano',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (p) => (
+                  <>
+                    {p.name}
+                    {p.ans_code && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        ANS {p.ans_code}
+                      </Typography>
+                    )}
+                  </>
+                ),
+              },
+              { key: 'operator', header: 'Operadora', render: (p) => p.operator || '—' },
+              {
+                key: 'type',
+                header: 'Modalidade',
+                render: (p) => (
+                  <Chip size="small" variant="outlined" label={planType.labelOf(p.plan_type)} />
+                ),
+              },
+              {
+                key: 'fee',
+                header: 'Mensalidade',
+                align: 'right',
+                mobile: 'value',
+                render: (p) => formatCents(p.monthly_fee_cents),
+              },
+              {
+                key: 'members',
+                header: 'Membros',
+                render: (p) =>
+                  p.members?.length ? (
+                    <Tooltip
+                      title={p.members
+                        .map((m) => memberName(m.member_id) + (m.holder ? ' (titular)' : ''))
+                        .join(', ')}
+                    >
+                      <AvatarGroup max={4} sx={{ justifyContent: 'flex-start', '& .MuiAvatar-root': { width: 30, height: 30, fontSize: 13 } }}>
+                        {p.members.map((m) => (
+                          <Avatar key={m.id}>{initials(memberName(m.member_id))}</Avatar>
+                        ))}
+                      </AvatarGroup>
+                    </Tooltip>
+                  ) : (
+                    <Typography variant="body2" color="text.secondary">
+                      Sem membros
+                    </Typography>
+                  ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (p) => (
+                  <Chip
+                    size="small"
+                    label={p.active ? 'Ativo' : 'Inativo'}
+                    color={p.active ? 'success' : 'default'}
+                    variant={p.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (p) => (
+                  <>
+                    <Tooltip title="Membros">
+                      <IconButton size="small" onClick={() => setMembersOf(p)}>
+                        <GroupsRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Documentos">
+                      <IconButton size="small" onClick={() => setDocsOf(p)}>
+                        <DescriptionRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(p)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(p)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 

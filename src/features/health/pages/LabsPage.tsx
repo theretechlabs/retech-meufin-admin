@@ -13,12 +13,6 @@ import {
   Link,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
 } from '@mui/material'
@@ -34,6 +28,8 @@ import { createLab, deleteLab, listLabsPaged, updateLab, type Lab, type LabInput
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -281,8 +277,9 @@ export default function LabsPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={status ? 1 : 0}
+        primary={
           <TextField
             value={q}
             onChange={(e) => {
@@ -300,6 +297,9 @@ export default function LabsPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Status"
             size="small"
@@ -314,7 +314,7 @@ export default function LabsPage() {
             options={ACTIVE_FILTER_OPTIONS}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -337,65 +337,70 @@ export default function LabsPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Telefone</TableCell>
-                  <TableCell>Portal</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {labs.map((l) => (
-                  <TableRow key={l.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{l.name}</TableCell>
-                    <TableCell>
-                      <Chip size="small" variant="outlined" label={labKind.labelOf(l.kind)} />
-                    </TableCell>
-                    <TableCell>{l.contact_phone || '—'}</TableCell>
-                    <TableCell>
-                      {l.exam_results_url ? (
-                        <Link
-                          href={l.exam_results_url}
-                          target="_blank"
-                          rel="noopener"
-                          sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
-                        >
-                          Abrir <OpenInNewRoundedIcon sx={{ fontSize: 14 }} />
-                        </Link>
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={l.active ? 'Ativo' : 'Inativo'}
-                        color={l.active ? 'success' : 'default'}
-                        variant={l.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(l)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(l)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={labs}
+            getRowKey={(l) => l.id}
+            size="medium"
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (l) => l.name },
+              {
+                key: 'kind',
+                header: 'Tipo',
+                render: (l) => <Chip size="small" variant="outlined" label={labKind.labelOf(l.kind)} />,
+              },
+              { key: 'phone', header: 'Telefone', render: (l) => l.contact_phone || '—' },
+              {
+                key: 'portal',
+                header: 'Portal',
+                mobileLabel: 'Portal',
+                render: (l) =>
+                  l.exam_results_url ? (
+                    <Link
+                      href={l.exam_results_url}
+                      target="_blank"
+                      rel="noopener"
+                      sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}
+                    >
+                      Abrir <OpenInNewRoundedIcon sx={{ fontSize: 14 }} />
+                    </Link>
+                  ) : (
+                    '—'
+                  ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (l) => (
+                  <Chip
+                    size="small"
+                    label={l.active ? 'Ativo' : 'Inativo'}
+                    color={l.active ? 'success' : 'default'}
+                    variant={l.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (l) => (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(l)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(l)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

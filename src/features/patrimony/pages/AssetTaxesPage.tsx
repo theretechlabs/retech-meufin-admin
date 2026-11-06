@@ -9,12 +9,6 @@ import {
   DialogTitle,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -42,6 +36,8 @@ import {
 import { listVehiclesPaged } from '@/features/vehicles/api'
 import { errorMessage, formatCents, formatDate, patrimonyKeys, TAX_STATUS_COLOR } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -394,7 +390,7 @@ export default function AssetTaxesPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
+      <FilterBar activeCount={(yearFilter ? 1 : 0) + (typeFilter ? 1 : 0) + (statusFilter ? 1 : 0)}>
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Ano"
@@ -429,7 +425,7 @@ export default function AssetTaxesPage() {
             loading={taxStatus.isLoading}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -448,72 +444,102 @@ export default function AssetTaxesPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Ano</TableCell>
-                  <TableCell>Vencimento</TableCell>
-                  <TableCell align="right">Valor</TableCell>
-                  <TableCell align="right">Pago</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {taxes.map((t) => (
-                  <TableRow key={t.id} hover>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={600}>
-                        {taxType.labelOf(t.tax_type)}
+          <DataTable
+            rows={taxes}
+            getRowKey={(t) => t.id}
+            size="medium"
+            columns={[
+              {
+                key: 'type',
+                header: 'Tipo',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (t) => (
+                  <>
+                    {taxType.labelOf(t.tax_type)}
+                    {t.description && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        {t.description}
                       </Typography>
-                      {t.description && (
-                        <Typography variant="caption" color="text.secondary">
-                          {t.description}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{t.reference_year}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{formatDate(t.due_date)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 600 }}>
-                      {formatCents(t.amount_cents)}
-                    </TableCell>
-                    <TableCell align="right" sx={{ color: 'text.secondary' }}>
-                      {formatCents(t.paid_cents)}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={taxStatus.labelOf(t.status)}
-                        color={TAX_STATUS_COLOR[t.status]}
-                        variant="filled"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {t.status !== 'paid' && (
-                        <Tooltip title="Marcar como pago">
-                          <IconButton size="small" color="success" onClick={() => setToPay(t)}>
-                            <PaidRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(t)}>
-                          <EditRoundedIcon fontSize="small" />
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: 'year',
+                header: 'Ano',
+                cellSx: { color: 'text.secondary' },
+                render: (t) => t.reference_year,
+              },
+              {
+                key: 'due',
+                header: 'Vencimento',
+                mobileLabel: 'Vence',
+                cellSx: { color: 'text.secondary' },
+                render: (t) => formatDate(t.due_date),
+              },
+              {
+                key: 'amount',
+                header: 'Valor',
+                align: 'right',
+                mobile: 'value',
+                cellSx: { fontWeight: 600 },
+                render: (t) => formatCents(t.amount_cents),
+              },
+              {
+                key: 'paid',
+                header: 'Pago',
+                align: 'right',
+                mobileLabel: 'Pago',
+                cellSx: { color: 'text.secondary' },
+                render: (t) => formatCents(t.paid_cents),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (t) => (
+                  <Chip
+                    size="small"
+                    label={taxStatus.labelOf(t.status)}
+                    color={TAX_STATUS_COLOR[t.status]}
+                    variant="filled"
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (t) => (
+                  <>
+                    {t.status !== 'paid' && (
+                      <Tooltip title="Marcar como pago">
+                        <IconButton size="small" color="success" onClick={() => setToPay(t)}>
+                          <PaidRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(t)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    )}
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(t)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(t)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 

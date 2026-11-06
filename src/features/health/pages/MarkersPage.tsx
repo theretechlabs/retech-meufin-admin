@@ -12,17 +12,13 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import EditRoundedIcon from '@mui/icons-material/EditRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
@@ -294,8 +290,9 @@ export default function MarkersPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={category ? 1 : 0}
+        primary={
           <TextField
             value={query}
             onChange={(e) => {
@@ -313,6 +310,9 @@ export default function MarkersPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Categoria"
             size="small"
@@ -328,7 +328,7 @@ export default function MarkersPage() {
             loading={markerCategory.isLoading}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -351,75 +351,86 @@ export default function MarkersPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome canônico</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Unidade</TableCell>
-                  <TableCell>Comparabilidade</TableCell>
-                  <TableCell>Origem</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((m) => (
-                  <TableRow key={m.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      <Stack spacing={0.25}>
-                        <span>{m.canonical_name}</span>
-                        {m.aliases && m.aliases.length > 0 && (
-                          <Typography variant="caption" color="text.secondary">
-                            {m.aliases.map((a) => a.alias).join(', ')}
-                          </Typography>
-                        )}
-                      </Stack>
-                    </TableCell>
-                    <TableCell>{markerCategory.labelOf(m.category)}</TableCell>
-                    <TableCell>{m.canonical_unit || '—'}</TableCell>
-                    <TableCell>{m.comparability_class}</TableCell>
-                    <TableCell>
-                      {m.scope === 'system' ? (
-                        <Chip
-                          size="small"
-                          icon={<LockRoundedIcon sx={{ fontSize: 14 }} />}
-                          label="Sistema"
-                          variant="outlined"
-                        />
-                      ) : (
-                        <Chip size="small" label="Tenant" color="primary" variant="outlined" />
-                      )}
-                    </TableCell>
-                    <TableCell align="right">
-                      {m.scope === 'system' ? (
-                        <Tooltip title="Marcador de sistema (somente leitura)">
-                          <Box component="span">
-                            <IconButton size="small" disabled>
-                              <LockRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Box>
-                        </Tooltip>
-                      ) : (
-                        <>
-                          <Tooltip title="Editar">
-                            <IconButton size="small" onClick={() => openEdit(m)}>
-                              <EditRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                          <Tooltip title="Excluir">
-                            <IconButton size="small" color="error" onClick={() => setToDelete(m)}>
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
-                        </>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={items}
+            getRowKey={(m) => m.id}
+            size="medium"
+            columns={[
+              {
+                key: 'name',
+                header: 'Nome canônico',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (m) => (
+                  <>
+                    {m.canonical_name}
+                    {m.aliases && m.aliases.length > 0 && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block', mt: 0.25 }}
+                      >
+                        {m.aliases.map((a) => a.alias).join(', ')}
+                      </Typography>
+                    )}
+                  </>
+                ),
+              },
+              { key: 'category', header: 'Categoria', render: (m) => markerCategory.labelOf(m.category) },
+              { key: 'unit', header: 'Unidade', render: (m) => m.canonical_unit || '—' },
+              {
+                key: 'comparability',
+                header: 'Comparabilidade',
+                mobileLabel: 'Classe',
+                render: (m) => m.comparability_class,
+              },
+              {
+                key: 'scope',
+                header: 'Origem',
+                render: (m) =>
+                  m.scope === 'system' ? (
+                    <Chip
+                      size="small"
+                      icon={<LockRoundedIcon sx={{ fontSize: 14 }} />}
+                      label="Sistema"
+                      variant="outlined"
+                    />
+                  ) : (
+                    <Chip size="small" label="Tenant" color="primary" variant="outlined" />
+                  ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (m) =>
+                  m.scope === 'system' ? (
+                    <Tooltip title="Marcador de sistema (somente leitura)">
+                      <Box component="span">
+                        <IconButton size="small" disabled>
+                          <LockRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Box>
+                    </Tooltip>
+                  ) : (
+                    <>
+                      <Tooltip title="Editar">
+                        <IconButton size="small" onClick={() => openEdit(m)}>
+                          <EditRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir">
+                        <IconButton size="small" color="error" onClick={() => setToDelete(m)}>
+                          <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={total}
             page={page}

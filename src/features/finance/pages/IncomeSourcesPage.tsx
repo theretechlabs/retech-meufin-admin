@@ -12,12 +12,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
 } from '@mui/material'
@@ -39,6 +33,8 @@ import {
 import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -247,25 +243,29 @@ export default function IncomeSourcesPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
+      <FilterBar
+        activeCount={(kind ? 1 : 0) + (status ? 1 : 0)}
+        primary={
+            <TextField
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                setPage(0)
+              }}
+              placeholder="Buscar por nome…"
+              size="small"
+              fullWidth
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRoundedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+        }
+      >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value)
-              setPage(0)
-            }}
-            placeholder="Buscar por nome…"
-            size="small"
-            fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRoundedIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
           <AutocompleteField
             label="Tipo"
             size="small"
@@ -294,7 +294,7 @@ export default function IncomeSourcesPage() {
             options={ARCHIVED_FILTER_OPTIONS_F}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -317,48 +317,53 @@ export default function IncomeSourcesPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell>Observações</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {sources.map((s) => (
-                  <TableRow key={s.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{s.name}</TableCell>
-                    <TableCell>{sourceKind.labelOf(s.kind)}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{s.notes || '—'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={s.active ? 'Ativa' : 'Inativa'}
-                        color={s.active ? 'success' : 'default'}
-                        variant={s.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(s)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(s)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={sources}
+            getRowKey={(s) => s.id}
+            size="medium"
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (s) => s.name },
+              { key: 'kind', header: 'Tipo', render: (s) => sourceKind.labelOf(s.kind) },
+              {
+                key: 'notes',
+                header: 'Observações',
+                cellSx: { color: 'text.secondary' },
+                render: (s) => s.notes || '—',
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (s) => (
+                  <Chip
+                    size="small"
+                    label={s.active ? 'Ativa' : 'Inativa'}
+                    color={s.active ? 'success' : 'default'}
+                    variant={s.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (s) => (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(s)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(s)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

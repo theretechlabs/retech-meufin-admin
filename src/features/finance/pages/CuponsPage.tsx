@@ -2,17 +2,10 @@ import { useMemo, useState } from 'react'
 import {
   Button,
   Card,
-  CardContent,
   Chip,
   Divider,
   Grid,
   InputAdornment,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
 } from '@mui/material'
 import ReceiptRoundedIcon from '@mui/icons-material/ReceiptRounded'
@@ -23,6 +16,8 @@ import { listFiscalDocuments } from '../api'
 import { financeKeys, errorMessage } from '../constants'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import {
   EmptyState,
@@ -109,57 +104,57 @@ export default function CuponsPage() {
         }
       />
 
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 5 }}>
-              <TextField
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setPage(0)
-                }}
-                placeholder="Buscar pelo nome do arquivo…"
-                size="small"
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRoundedIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
-              <AutocompleteField
-                label="Leitura"
-                size="small"
-                emptyLabel="Todas"
-                value={status}
-                onChange={(v) => {
-                  setStatus(v)
-                  setPage(0)
-                }}
-                options={STATUS_OPTIONS}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
-              <AutocompleteField
-                label="Vínculo"
-                size="small"
-                emptyLabel="Todos"
-                value={linked}
-                onChange={(v) => {
-                  setLinked(v)
-                  setPage(0)
-                }}
-                options={LINK_OPTIONS}
-              />
-            </Grid>
+      <FilterBar
+        activeCount={(status ? 1 : 0) + (linked ? 1 : 0)}
+        primary={
+          <TextField
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setPage(0)
+            }}
+            placeholder="Buscar pelo nome do arquivo…"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      >
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
+            <AutocompleteField
+              label="Leitura"
+              size="small"
+              emptyLabel="Todas"
+              value={status}
+              onChange={(v) => {
+                setStatus(v)
+                setPage(0)
+              }}
+              options={STATUS_OPTIONS}
+            />
           </Grid>
-        </CardContent>
-      </Card>
+          <Grid size={{ xs: 6, sm: 3, md: 3.5 }}>
+            <AutocompleteField
+              label="Vínculo"
+              size="small"
+              emptyLabel="Todos"
+              value={linked}
+              onChange={(v) => {
+                setLinked(v)
+                setPage(0)
+              }}
+              options={LINK_OPTIONS}
+            />
+          </Grid>
+        </Grid>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -203,59 +198,47 @@ export default function CuponsPage() {
         )
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Arquivo</TableCell>
-                  <TableCell>Importado em</TableCell>
-                  <TableCell>Leitura</TableCell>
-                  <TableCell>Vínculo</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {docs.map((d) => (
-                  <TableRow key={d.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>
-                      {d.original_file_name || d.file_name || '—'}
-                    </TableCell>
-                    <TableCell>
-                      {d.created_at ? formatDateBR(d.created_at) : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={
-                          EXTRACTION_LABEL[d.extraction_status ?? ''] ??
-                          d.extraction_status
-                        }
-                        color={
-                          EXTRACTION_COLOR[d.extraction_status ?? ''] ??
-                          'default'
-                        }
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      {d.entry_id ? (
-                        <Chip
-                          size="small"
-                          color="success"
-                          label="Vinculado a despesa"
-                        />
-                      ) : (
-                        <Chip
-                          size="small"
-                          variant="outlined"
-                          label="Sem vínculo"
-                        />
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={docs}
+            getRowKey={(d) => d.id}
+            size="medium"
+            columns={[
+              {
+                key: 'file',
+                header: 'Arquivo',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (d) => d.original_file_name || d.file_name || '—',
+              },
+              {
+                key: 'created',
+                header: 'Importado em',
+                render: (d) => (d.created_at ? formatDateBR(d.created_at) : '—'),
+              },
+              {
+                key: 'extraction',
+                header: 'Leitura',
+                render: (d) => (
+                  <Chip
+                    size="small"
+                    label={EXTRACTION_LABEL[d.extraction_status ?? ''] ?? d.extraction_status}
+                    color={EXTRACTION_COLOR[d.extraction_status ?? ''] ?? 'default'}
+                    variant="outlined"
+                  />
+                ),
+              },
+              {
+                key: 'link',
+                header: 'Vínculo',
+                render: (d) =>
+                  d.entry_id ? (
+                    <Chip size="small" color="success" label="Vinculado a despesa" />
+                  ) : (
+                    <Chip size="small" variant="outlined" label="Sem vínculo" />
+                  ),
+              },
+            ]}
+          />
           <Divider />
           <TablePaginationBR
             total={data?.total ?? 0}

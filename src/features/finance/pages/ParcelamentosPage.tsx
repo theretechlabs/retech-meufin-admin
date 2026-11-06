@@ -60,6 +60,7 @@ import { useExpenseCategories } from '../hooks/useExpenseCategories'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
+import { StatCard } from '@/components/common/StatCard'
 
 const MONTH_SHORT = [
   'jan', 'fev', 'mar', 'abr', 'mai', 'jun',
@@ -95,39 +96,6 @@ function monthlyFromGroups(groups: InstallmentGroup[]): MonthlyCommitment[] {
     }
   }
   return [...acc.values()].sort((a, b) => a.month.localeCompare(b.month))
-}
-
-function StatCard({
-  icon,
-  label,
-  value,
-  hint,
-}: {
-  icon: React.ReactNode
-  label: string
-  value: string
-  hint?: string
-}) {
-  return (
-    <Card variant="outlined" sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 0.5 }}>
-          {icon}
-          <Typography variant="overline" color="text.secondary" noWrap>
-            {label}
-          </Typography>
-        </Stack>
-        <Typography variant="h5" sx={{ fontWeight: 800 }}>
-          {value}
-        </Typography>
-        {hint && (
-          <Typography variant="caption" color="text.secondary">
-            {hint}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 export default function ParcelamentosPage() {
@@ -306,7 +274,7 @@ export default function ParcelamentosPage() {
           ) : (
             <>
               <Grid container spacing={2}>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                   <StatCard
                     icon={<PaidRoundedIcon fontSize="small" color="warning" />}
                     label="Comprometido total"
@@ -314,7 +282,7 @@ export default function ParcelamentosPage() {
                     hint="Parcelas futuras já contratadas"
                   />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                   <StatCard
                     icon={
                       <CalendarMonthRoundedIcon
@@ -331,7 +299,7 @@ export default function ParcelamentosPage() {
                     }
                   />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                   <StatCard
                     icon={
                       <CreditCardRoundedIcon fontSize="small" color="info" />
@@ -341,7 +309,7 @@ export default function ParcelamentosPage() {
                     hint="Em faturas de cartão e despesas parceladas"
                   />
                 </Grid>
-                <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+                <Grid size={{ xs: 6, sm: 6, md: 3 }}>
                   <StatCard
                     icon={
                       <TimelineRoundedIcon fontSize="small" color="success" />

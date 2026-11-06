@@ -5,7 +5,6 @@ import {
   CardContent,
   Chip,
   Grid,
-  LinearProgress,
   Skeleton,
   Stack,
   Typography,
@@ -27,6 +26,7 @@ import {
   YAxis,
 } from 'recharts'
 import { useAuth } from '@/auth/context/jwt/auth-provider'
+import { StatCard } from '@/components/common/StatCard'
 import { lp } from '@/theme/tokens'
 import { BirthdayBoard } from '@/features/health/components/BirthdayBoard'
 import {
@@ -37,78 +37,6 @@ import {
 } from '@/features/finance/api'
 
 const MONTH_LABELS = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez']
-
-function SummaryCard({
-  title,
-  value,
-  hint,
-  icon: Icon,
-  progress,
-  loading,
-}: {
-  title: string
-  value: string
-  hint: string
-  icon: typeof TrendingUpRoundedIcon
-  progress?: number
-  loading?: boolean
-}) {
-  return (
-    <Card>
-      <CardContent sx={{ p: 2.5, '&:last-child': { pb: 2.5 } }}>
-        <Stack direction="row" justifyContent="space-between" alignItems="flex-start" spacing={2}>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" color="text.secondary" fontWeight={600}>
-              {title}
-            </Typography>
-            {loading ? (
-              <Skeleton width={120} height={36} sx={{ mt: 0.5 }} />
-            ) : (
-              <Typography
-                variant="h5"
-                sx={{ fontFamily: (t) => t.typography.h5.fontFamily, fontWeight: 800, mt: 0.5 }}
-                noWrap
-              >
-                {value}
-              </Typography>
-            )}
-            <Typography variant="caption" color="text.disabled" sx={{ mt: 0.5, display: 'block' }}>
-              {hint}
-            </Typography>
-          </Box>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              flexShrink: 0,
-              bgcolor: (t) => alpha(t.palette.primary.main, t.palette.mode === 'dark' ? 0.15 : 0.12),
-              color: 'primary.main',
-            }}
-          >
-            <Icon />
-          </Box>
-        </Stack>
-        {progress != null && (
-          <LinearProgress
-            variant="determinate"
-            value={Math.max(0, Math.min(100, progress))}
-            sx={{
-              mt: 2,
-              height: 6,
-              borderRadius: 3,
-              bgcolor: (t) => alpha(t.palette.primary.main, 0.12),
-              '& .MuiLinearProgress-bar': { borderRadius: 3, bgcolor: lp.neon },
-            }}
-          />
-        )}
-      </CardContent>
-    </Card>
-  )
-}
 
 function MonthlyFlowChart() {
   const theme = useTheme()
@@ -199,7 +127,14 @@ export default function DashboardPage() {
         sx={{ mb: 3 }}
       >
         <Box>
-          <Typography variant="h4" sx={{ fontWeight: 800, fontFamily: (t) => t.typography.h4.fontFamily }}>
+          <Typography
+            variant="h4"
+            sx={{
+              fontWeight: 800,
+              fontFamily: (t) => t.typography.h4.fontFamily,
+              fontSize: { xs: '1.5rem', sm: '2.125rem' },
+            }}
+          >
             Olá, {user?.name?.split(' ')[0] ?? 'visitante'}
           </Typography>
           <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
@@ -216,9 +151,9 @@ export default function DashboardPage() {
       </Stack>
 
       <Grid container spacing={2.5}>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <SummaryCard
-            title="Receitas (mês)"
+        <Grid size={{ xs: 6, md: 4 }}>
+          <StatCard
+            label="Receitas (mês)"
             value={summary ? formatCents(summary.income_realized_cents) : '—'}
             hint={summary ? `Previsto: ${formatCents(summary.income_expected_cents)}` : 'Carregando...'}
             icon={TrendingUpRoundedIcon}
@@ -226,18 +161,18 @@ export default function DashboardPage() {
             loading={isLoading}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <SummaryCard
-            title="Despesas (mês)"
+        <Grid size={{ xs: 6, md: 4 }}>
+          <StatCard
+            label="Despesas (mês)"
             value={summary ? formatCents(summary.expense_realized_cents) : '—'}
             hint={summary ? `Previsto: ${formatCents(summary.expense_expected_cents)}` : 'Carregando...'}
             icon={PaymentsRoundedIcon}
             loading={isLoading}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-          <SummaryCard
-            title="Saldo (mês)"
+        <Grid size={{ xs: 12, md: 4 }}>
+          <StatCard
+            label="Saldo (mês)"
             value={summary ? formatCents(summary.balance_realized_cents) : '—'}
             hint={summary ? `Projetado: ${formatCents(summary.balance_expected_cents)}` : 'Carregando...'}
             icon={SavingsRoundedIcon}

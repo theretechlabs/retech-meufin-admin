@@ -12,12 +12,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
 } from '@mui/material'
@@ -39,6 +33,8 @@ import {
 import { errorMessage, financeKeys } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -404,25 +400,29 @@ export default function FornecedoresPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
+      <FilterBar
+        activeCount={(category ? 1 : 0) + (status ? 1 : 0)}
+        primary={
+            <TextField
+              value={q}
+              onChange={(e) => {
+                setQ(e.target.value)
+                setPage(0)
+              }}
+              placeholder="Buscar por nome…"
+              size="small"
+              fullWidth
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchRoundedIcon fontSize="small" />
+                  </InputAdornment>
+                ),
+              }}
+            />
+        }
+      >
         <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-          <TextField
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value)
-              setPage(0)
-            }}
-            placeholder="Buscar por nome…"
-            size="small"
-            fullWidth
-            InputProps={{
-              startAdornment: (
-                <InputAdornment position="start">
-                  <SearchRoundedIcon fontSize="small" />
-                </InputAdornment>
-              ),
-            }}
-          />
           <AutocompleteField
             label="Categoria"
             size="small"
@@ -451,7 +451,7 @@ export default function FornecedoresPage() {
             options={ACTIVE_FILTER_OPTIONS}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -474,68 +474,74 @@ export default function FornecedoresPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Cobrança padrão</TableCell>
-                  <TableCell>Origem</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {suppliers.map((s) => (
-                  <TableRow key={s.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{s.name}</TableCell>
-                    <TableCell>{supplierCategory.labelOf(s.category)}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {supplierBilling.labelOf(s.default_billing_type)}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={s.is_global ? 'Global' : 'Meu workspace'}
-                        color={s.is_global ? 'info' : 'default'}
-                        variant="outlined"
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={s.active ? 'Ativo' : 'Inativo'}
-                        color={s.active ? 'success' : 'default'}
-                        variant={s.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title={s.is_global ? 'Fornecedores globais não podem ser editados' : 'Editar'}>
-                        <span>
-                          <IconButton size="small" onClick={() => openEdit(s)} disabled={s.is_global}>
-                            <EditRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                      <Tooltip title={s.is_global ? 'Fornecedores globais não podem ser excluídos' : 'Excluir'}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            onClick={() => setToDelete(s)}
-                            disabled={s.is_global}
-                          >
-                            <DeleteOutlineRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={suppliers}
+            getRowKey={(s) => s.id}
+            size="medium"
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (s) => s.name },
+              { key: 'category', header: 'Categoria', render: (s) => supplierCategory.labelOf(s.category) },
+              {
+                key: 'billing',
+                header: 'Cobrança padrão',
+                cellSx: { color: 'text.secondary' },
+                render: (s) => supplierBilling.labelOf(s.default_billing_type),
+              },
+              {
+                key: 'origin',
+                header: 'Origem',
+                render: (s) => (
+                  <Chip
+                    size="small"
+                    label={s.is_global ? 'Global' : 'Meu workspace'}
+                    color={s.is_global ? 'info' : 'default'}
+                    variant="outlined"
+                  />
+                ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (s) => (
+                  <Chip
+                    size="small"
+                    label={s.active ? 'Ativo' : 'Inativo'}
+                    color={s.active ? 'success' : 'default'}
+                    variant={s.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (s) => (
+                  <>
+                    <Tooltip title={s.is_global ? 'Fornecedores globais não podem ser editados' : 'Editar'}>
+                      <span>
+                        <IconButton size="small" onClick={() => openEdit(s)} disabled={s.is_global}>
+                          <EditRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                    <Tooltip title={s.is_global ? 'Fornecedores globais não podem ser excluídos' : 'Excluir'}>
+                      <span>
+                        <IconButton
+                          size="small"
+                          color="error"
+                          onClick={() => setToDelete(s)}
+                          disabled={s.is_global}
+                        >
+                          <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </span>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

@@ -11,12 +11,6 @@ import {
   Grid,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -50,6 +44,7 @@ import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
+import { DataTable } from '@/components/tables/DataTable'
 import { useSchoolYears } from '../hooks/useSchoolYears'
 
 type FormState = {
@@ -224,57 +219,63 @@ export default function EnrollmentsPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table size="small">
-              <TableHead>
-                <TableRow>
-                  <TableCell>Membro</TableCell>
-                  <TableCell>Ano</TableCell>
-                  <TableCell>Etapa</TableCell>
-                  <TableCell>Escola</TableCell>
-                  <TableCell>Série</TableCell>
-                  <TableCell align="right">Mensalidade</TableCell>
-                  <TableCell align="right">Matrícula</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {enrollments.map((e) => (
-                  <TableRow key={e.id} hover>
-                    <TableCell>{e.member_name ?? '—'}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={e.school_year} variant="outlined" />
-                    </TableCell>
-                    <TableCell>{stage.labelOf(e.stage)}</TableCell>
-                    <TableCell>{e.school_name ?? '—'}</TableCell>
-                    <TableCell>{e.grade ?? '—'}</TableCell>
-                    <TableCell align="right">{formatCents(e.monthly_fee_cents)}</TableCell>
-                    <TableCell align="right">{formatCents(e.enrollment_fee_cents)}</TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(e)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => {
-                            if (window.confirm(`Excluir a matrícula de ${e.member_name ?? 'membro'}?`)) {
-                              deleteMutation.mutate(e.id)
-                            }
-                          }}
-                        >
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={enrollments}
+            getRowKey={(e) => e.id}
+            columns={[
+              { key: 'member', header: 'Membro', mobile: 'title', render: (e) => e.member_name ?? '—' },
+              {
+                key: 'year',
+                header: 'Ano',
+                render: (e) => <Chip size="small" label={e.school_year} variant="outlined" />,
+              },
+              { key: 'stage', header: 'Etapa', render: (e) => stage.labelOf(e.stage) },
+              { key: 'school', header: 'Escola', render: (e) => e.school_name ?? '—' },
+              { key: 'grade', header: 'Série', render: (e) => e.grade ?? '—' },
+              {
+                key: 'monthly',
+                header: 'Mensalidade',
+                align: 'right',
+                mobile: 'value',
+                render: (e) => formatCents(e.monthly_fee_cents),
+              },
+              {
+                key: 'enrollment',
+                header: 'Matrícula',
+                align: 'right',
+                mobileLabel: 'Matrícula',
+                render: (e) => formatCents(e.enrollment_fee_cents),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (e) => (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(e)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => {
+                          if (window.confirm(`Excluir a matrícula de ${e.member_name ?? 'membro'}?`)) {
+                            deleteMutation.mutate(e.id)
+                          }
+                        }}
+                      >
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 

@@ -14,11 +14,6 @@ import {
   Grid,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -58,6 +53,7 @@ import { PageHeader } from '@/features/health/components/PageHeader'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
+import { DataTable } from '@/components/tables/DataTable'
 import { useSchoolYears } from '../hooks/useSchoolYears'
 
 /** Diferença referência × pago de um item comprado, em centavos (positivo = economia). */
@@ -351,77 +347,92 @@ function SupplyListCard({
           </Tooltip>
         </Stack>
 
-        <Table size="small">
-          <TableHead>
-            <TableRow>
-              <TableCell padding="checkbox" />
-              <TableCell>Item</TableCell>
-              <TableCell>Categoria</TableCell>
-              <TableCell align="right">Qtd</TableCell>
-              <TableCell align="right">Referência</TableCell>
-              <TableCell align="right">Pago</TableCell>
-              <TableCell align="right">Economia</TableCell>
-              <TableCell align="right">Ações</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {list.items.length === 0 ? (
-              <TableRow>
-                <TableCell colSpan={8}>
-                  <Typography variant="body2" color="text.secondary" sx={{ py: 1 }}>
-                    Nenhum item ainda. Adicione abaixo.
-                  </Typography>
-                </TableCell>
-              </TableRow>
-            ) : (
-              list.items.map((it) => (
-                <TableRow key={it.id} hover>
-                  <TableCell padding="checkbox">
-                    <Checkbox
-                      size="small"
-                      checked={it.purchased}
-                      onChange={() => togglePurchased.mutate(it)}
-                    />
-                  </TableCell>
-                  <TableCell
-                    sx={{
-                      textDecoration: it.purchased ? 'line-through' : 'none',
-                      color: it.purchased ? 'text.secondary' : 'text.primary',
-                    }}
-                  >
-                    {it.name}
-                    {it.store ? (
-                      <Typography variant="caption" color="text.disabled" sx={{ display: 'block' }}>
-                        {it.store}
-                      </Typography>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{itemCategory.labelOf(it.category)}</TableCell>
-                  <TableCell align="right">{it.quantity}</TableCell>
-                  <TableCell align="right">
-                    {formatCents(Math.round(it.reference_price_cents * it.quantity))}
-                  </TableCell>
-                  <TableCell align="right">{it.purchased ? formatCents(it.paid_price_cents) : '—'}</TableCell>
-                  <TableCell align="right">
-                    <DiffChip cents={itemSavingsCents(it)} />
-                  </TableCell>
-                  <TableCell align="right">
-                    <Tooltip title="Marcar comprado / editar compra">
-                      <IconButton size="small" color="primary" onClick={() => onPurchase(list.id, it)}>
-                        <ShoppingCartCheckoutRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                    <Tooltip title="Remover item">
-                      <IconButton size="small" color="error" onClick={() => removeItem.mutate(it.id)}>
-                        <DeleteOutlineRoundedIcon fontSize="small" />
-                      </IconButton>
-                    </Tooltip>
-                  </TableCell>
-                </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+        <DataTable
+          rows={list.items}
+          getRowKey={(it) => it.id}
+          empty={
+            <Typography variant="body2" color="text.secondary" sx={{ px: 2, py: 1 }}>
+              Nenhum item ainda. Adicione abaixo.
+            </Typography>
+          }
+          leading={(it) => (
+            <Checkbox
+              size="small"
+              checked={it.purchased}
+              onChange={() => togglePurchased.mutate(it)}
+            />
+          )}
+          columns={[
+            {
+              key: 'name',
+              header: 'Item',
+              mobile: 'title',
+              render: (it) => (
+                <Box
+                  component="span"
+                  sx={{
+                    textDecoration: it.purchased ? 'line-through' : 'none',
+                    color: it.purchased ? 'text.secondary' : 'text.primary',
+                  }}
+                >
+                  {it.name}
+                  {it.store ? (
+                    <Typography
+                      component="span"
+                      variant="caption"
+                      color="text.disabled"
+                      sx={{ display: 'block' }}
+                    >
+                      {it.store}
+                    </Typography>
+                  ) : null}
+                </Box>
+              ),
+            },
+            { key: 'category', header: 'Categoria', render: (it) => itemCategory.labelOf(it.category) },
+            { key: 'quantity', header: 'Qtd', align: 'right', mobileLabel: 'Qtd', render: (it) => it.quantity },
+            {
+              key: 'reference',
+              header: 'Referência',
+              align: 'right',
+              mobile: 'value',
+              render: (it) => formatCents(Math.round(it.reference_price_cents * it.quantity)),
+            },
+            {
+              key: 'paid',
+              header: 'Pago',
+              align: 'right',
+              mobileLabel: 'Pago',
+              render: (it) => (it.purchased ? formatCents(it.paid_price_cents) : '—'),
+            },
+            {
+              key: 'savings',
+              header: 'Economia',
+              align: 'right',
+              render: (it) => <DiffChip cents={itemSavingsCents(it)} />,
+            },
+            {
+              key: 'actions',
+              header: 'Ações',
+              align: 'right',
+              mobile: 'actions',
+              render: (it) => (
+                <>
+                  <Tooltip title="Marcar comprado / editar compra">
+                    <IconButton size="small" color="primary" onClick={() => onPurchase(list.id, it)}>
+                      <ShoppingCartCheckoutRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                  <Tooltip title="Remover item">
+                    <IconButton size="small" color="error" onClick={() => removeItem.mutate(it.id)}>
+                      <DeleteOutlineRoundedIcon fontSize="small" />
+                    </IconButton>
+                  </Tooltip>
+                </>
+              ),
+            },
+          ]}
+        />
 
         <AddItemRow listId={list.id} />
       </AccordionDetails>

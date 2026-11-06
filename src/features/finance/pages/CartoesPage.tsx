@@ -12,12 +12,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
 } from '@mui/material'
@@ -40,6 +34,7 @@ import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_M } from '../constan
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -375,56 +370,62 @@ export default function CartoesPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Banco</TableCell>
-                  <TableCell>Bandeira</TableCell>
-                  <TableCell align="center">Fechamento</TableCell>
-                  <TableCell align="center">Vencimento</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {cards.map((c) => (
-                  <TableRow key={c.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{c.name}</TableCell>
-                    <TableCell>{cardBank.labelOf(c.bank)}</TableCell>
-                    <TableCell>{cardBrand.labelOf(c.brand)}</TableCell>
-                    <TableCell align="center">
-                      {c.closing_day != null ? `Dia ${c.closing_day}` : '—'}
-                    </TableCell>
-                    <TableCell align="center">
-                      {c.due_day != null ? `Dia ${c.due_day}` : '—'}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={c.active ? 'Ativo' : 'Inativo'}
-                        color={c.active ? 'success' : 'default'}
-                        variant={c.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(c)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(c)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={cards}
+            getRowKey={(c) => c.id}
+            size="medium"
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (c) => c.name },
+              { key: 'bank', header: 'Banco', render: (c) => cardBank.labelOf(c.bank) },
+              { key: 'brand', header: 'Bandeira', render: (c) => cardBrand.labelOf(c.brand) },
+              {
+                key: 'closing',
+                header: 'Fechamento',
+                align: 'center',
+                mobileLabel: 'Fecha',
+                render: (c) => (c.closing_day != null ? `Dia ${c.closing_day}` : '—'),
+              },
+              {
+                key: 'due',
+                header: 'Vencimento',
+                align: 'center',
+                mobileLabel: 'Vence',
+                render: (c) => (c.due_day != null ? `Dia ${c.due_day}` : '—'),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (c) => (
+                  <Chip
+                    size="small"
+                    label={c.active ? 'Ativo' : 'Inativo'}
+                    color={c.active ? 'success' : 'default'}
+                    variant={c.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (c) => (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(c)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(c)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

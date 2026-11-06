@@ -13,12 +13,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
 } from '@mui/material'
@@ -40,6 +34,8 @@ import {
 import { errorMessage, financeKeys, ARCHIVED_FILTER_OPTIONS_F } from '../constants'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -233,8 +229,9 @@ export default function CategoriasPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={(group ? 1 : 0) + (status ? 1 : 0)}
+        primary={
           <TextField
             value={query}
             onChange={(e) => {
@@ -252,6 +249,9 @@ export default function CategoriasPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Grupo"
             size="small"
@@ -279,7 +279,7 @@ export default function CategoriasPage() {
             options={ARCHIVED_FILTER_OPTIONS_F}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -297,61 +297,76 @@ export default function CategoriasPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Grupo (indicadores)</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {categories.map((cat) => (
-                  <TableRow key={cat.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{cat.name}</TableCell>
-                    <TableCell>
-                      <Chip size="small" variant="outlined" label={cat.group_name} />
-                    </TableCell>
-                    <TableCell>
-                      <Chip
+          <DataTable
+            rows={categories}
+            getRowKey={(cat) => cat.id}
+            size="medium"
+            columns={[
+              {
+                key: 'name',
+                header: 'Categoria',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (cat) => cat.name,
+              },
+              {
+                key: 'group',
+                header: 'Grupo (indicadores)',
+                render: (cat) => <Chip size="small" variant="outlined" label={cat.group_name} />,
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (cat) => (
+                  <Chip
+                    size="small"
+                    label={cat.active ? 'Ativa' : 'Arquivada'}
+                    color={cat.active ? 'success' : 'default'}
+                    variant={cat.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (cat) => (
+                  <>
+                    <Tooltip title="Editar">
+                      <IconButton
                         size="small"
-                        label={cat.active ? 'Ativa' : 'Arquivada'}
-                        color={cat.active ? 'success' : 'default'}
-                        variant={cat.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Editar">
+                        onClick={() => {
+                          setEditing(cat)
+                          setFormOpen(true)
+                        }}
+                      >
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip
+                      title={
+                        cat.slug === 'outros'
+                          ? "'Outros' é o destino padrão — não pode ser removida"
+                          : 'Excluir'
+                      }
+                    >
+                      <span>
                         <IconButton
                           size="small"
-                          onClick={() => {
-                            setEditing(cat)
-                            setFormOpen(true)
-                          }}
+                          color="error"
+                          disabled={cat.slug === 'outros'}
+                          onClick={() => setToDelete(cat)}
                         >
-                          <EditRoundedIcon fontSize="small" />
+                          <DeleteOutlineRoundedIcon fontSize="small" />
                         </IconButton>
-                      </Tooltip>
-                      <Tooltip title={cat.slug === 'outros' ? "'Outros' é o destino padrão — não pode ser removida" : 'Excluir'}>
-                        <span>
-                          <IconButton
-                            size="small"
-                            color="error"
-                            disabled={cat.slug === 'outros'}
-                            onClick={() => setToDelete(cat)}
-                          >
-                            <DeleteOutlineRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </span>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      </span>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

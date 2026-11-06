@@ -3,19 +3,12 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   Grid,
   IconButton,
   InputAdornment,
   LinearProgress,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -52,63 +45,14 @@ import { WarrantyDocumentsDialog } from '../components/WarrantyDocumentsDialog'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { WarrantyFormDialog } from '../components/WarrantyFormDialog'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
+import { StatCard } from '@/components/common/StatCard'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 
-type SvgIconComponent = React.ElementType
 
-function SummaryCard({
-  title,
-  value,
-  icon: Icon,
-  color,
-  hint,
-}: {
-  title: string
-  value: string
-  icon: SvgIconComponent
-  color?: string
-  hint?: string
-}) {
-  const theme = useTheme()
-  const c = color ?? theme.palette.primary.main
-  return (
-    <Card sx={{ height: '100%' }}>
-      <CardContent>
-        <Stack direction="row" alignItems="center" spacing={2}>
-          <Box
-            sx={{
-              width: 48,
-              height: 48,
-              borderRadius: 2,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              bgcolor: alpha(c, 0.12),
-              color: c,
-            }}
-          >
-            <Icon />
-          </Box>
-          <Box sx={{ minWidth: 0 }}>
-            <Typography variant="body2" color="text.secondary" noWrap>
-              {title}
-            </Typography>
-            <Typography variant="h5" fontWeight={800} noWrap>
-              {value}
-            </Typography>
-            {hint && (
-              <Typography variant="caption" color="text.secondary">
-                {hint}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
-      </CardContent>
-    </Card>
-  )
-}
 
 function WarrantyProgress({ w }: { w: Warranty }) {
   const theme = useTheme()
@@ -204,36 +148,36 @@ export default function WarrantiesPage() {
 
       {/* Cards de resumo */}
       <Grid container spacing={2.5} sx={{ mb: 3 }}>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <SummaryCard
-            title="Garantias vigentes"
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard
+            label="Garantias vigentes"
             value={String(summary ? summary.total_active - summary.expired_this_year : '—')}
             icon={VerifiedUserRoundedIcon}
             color={theme.palette.success.main}
             hint={summary ? `${summary.total_active} cadastradas` : undefined}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <SummaryCard
-            title="Expiram em 60 dias"
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard
+            label="Expiram em 60 dias"
             value={summary ? String(summary.expiring_in_60_count) : '—'}
             icon={EventBusyRoundedIcon}
             color={theme.palette.warning.main}
             hint={summary ? `${summary.expiring_in_30_count} em 30 dias` : undefined}
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <SummaryCard
-            title="Valor coberto"
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard
+            label="Valor coberto"
             value={summary ? formatMoneyCents(summary.total_covered_cents) : '—'}
             icon={PaidRoundedIcon}
             color={theme.palette.primary.main}
             hint="Itens ainda na garantia"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-          <SummaryCard
-            title="Expiradas no ano"
+        <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+          <StatCard
+            label="Expiradas no ano"
             value={summary ? String(summary.expired_this_year) : '—'}
             icon={ShieldRoundedIcon}
             color={theme.palette.error.main}
@@ -242,48 +186,50 @@ export default function WarrantiesPage() {
       </Grid>
 
       {/* Filtros */}
-      <Card sx={{ mb: 2 }}>
-        <CardContent>
-          <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
-            <TextField
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Buscar por item ou marca…"
-              fullWidth
-              InputProps={{
-                startAdornment: (
-                  <InputAdornment position="start">
-                    <SearchRoundedIcon fontSize="small" />
-                  </InputAdornment>
-                ),
-              }}
-            />
-            <AutocompleteField
-              label="Categoria"
-              emptyLabel="Todas"
-              value={category}
-              onChange={setCategory}
-              options={categoryCatalog.items.map((it) => ({
-                value: it.slug,
-                label: `${CATEGORY_ICON[it.slug as WarrantyCategory] ?? ''} ${it.name}`,
-              }))}
-              loading={categoryCatalog.isLoading}
-              fullWidth={false}
-              sx={{ minWidth: 200 }}
-            />
-            <AutocompleteField
-              label="Situação"
-              emptyLabel="Todas"
-              value={status}
-              onChange={setStatus}
-              options={statusCatalog.options}
-              loading={statusCatalog.isLoading}
-              fullWidth={false}
-              sx={{ minWidth: 200 }}
-            />
-          </Stack>
-        </CardContent>
-      </Card>
+      <FilterBar
+        activeCount={(category ? 1 : 0) + (status ? 1 : 0)}
+        primary={
+          <TextField
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por item ou marca…"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      >
+        <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
+          <AutocompleteField
+            label="Categoria"
+            emptyLabel="Todas"
+            value={category}
+            onChange={setCategory}
+            options={categoryCatalog.items.map((it) => ({
+              value: it.slug,
+              label: `${CATEGORY_ICON[it.slug as WarrantyCategory] ?? ''} ${it.name}`,
+            }))}
+            loading={categoryCatalog.isLoading}
+            fullWidth={false}
+            sx={{ minWidth: 200 }}
+          />
+          <AutocompleteField
+            label="Situação"
+            emptyLabel="Todas"
+            value={status}
+            onChange={setStatus}
+            options={statusCatalog.options}
+            loading={statusCatalog.isLoading}
+            fullWidth={false}
+            sx={{ minWidth: 200 }}
+          />
+        </Stack>
+      </FilterBar>
 
       {/* Tabela */}
       {listQuery.isLoading ? (
@@ -303,73 +249,100 @@ export default function WarrantiesPage() {
         />
       ) : (
         <Card>
-          <TableContainer sx={{ overflowX: 'auto' }}>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Item</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Compra</TableCell>
-                  <TableCell>Valor</TableCell>
-                  <TableCell>Situação</TableCell>
-                  <TableCell sx={{ minWidth: 180 }}>Garantia</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((w) => (
-                  <TableRow key={w.id} hover>
-                    <TableCell>
-                      <Typography variant="body2" fontWeight={700}>
-                        {w.item_name}
+          <DataTable
+            rows={items}
+            getRowKey={(w) => w.id}
+            size="medium"
+            sx={{ overflowX: 'auto' }}
+            columns={[
+              {
+                key: 'item',
+                header: 'Item',
+                mobile: 'title',
+                cellSx: { fontWeight: 700 },
+                render: (w) => (
+                  <>
+                    {w.item_name}
+                    {(w.brand || w.model) && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        {[w.brand, w.model].filter(Boolean).join(' · ')}
                       </Typography>
-                      {(w.brand || w.model) && (
-                        <Typography variant="caption" color="text.secondary">
-                          {[w.brand, w.model].filter(Boolean).join(' · ')}
-                        </Typography>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        variant="outlined"
-                        label={`${CATEGORY_ICON[w.category]} ${categoryCatalog.labelOf(w.category)}`}
-                      />
-                    </TableCell>
-                    <TableCell>{formatDate(w.purchase_date)}</TableCell>
-                    <TableCell>{formatMoneyCents(w.price_cents)}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        color={STATUS_COLOR[w.status]}
-                        label={statusCatalog.labelOf(w.status)}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <WarrantyProgress w={w} />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Documentos">
-                        <IconButton size="small" onClick={() => setDocsFor(w)}>
-                          <FolderOpenRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(w)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(w)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: 'category',
+                header: 'Categoria',
+                render: (w) => (
+                  <Chip
+                    size="small"
+                    variant="outlined"
+                    label={`${CATEGORY_ICON[w.category]} ${categoryCatalog.labelOf(w.category)}`}
+                  />
+                ),
+              },
+              {
+                key: 'purchase',
+                header: 'Compra',
+                mobileLabel: 'Compra',
+                render: (w) => formatDate(w.purchase_date),
+              },
+              {
+                key: 'price',
+                header: 'Valor',
+                mobile: 'value',
+                render: (w) => formatMoneyCents(w.price_cents),
+              },
+              {
+                key: 'status',
+                header: 'Situação',
+                render: (w) => (
+                  <Chip
+                    size="small"
+                    color={STATUS_COLOR[w.status]}
+                    label={statusCatalog.labelOf(w.status)}
+                  />
+                ),
+              },
+              {
+                key: 'progress',
+                header: 'Garantia',
+                headerSx: { minWidth: 180 },
+                render: (w) => <WarrantyProgress w={w} />,
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (w) => (
+                  <>
+                    <Tooltip title="Documentos">
+                      <IconButton size="small" onClick={() => setDocsFor(w)}>
+                        <FolderOpenRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(w)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(w)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 

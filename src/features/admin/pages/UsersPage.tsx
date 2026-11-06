@@ -9,18 +9,14 @@ import {
   DialogContent,
   DialogTitle,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   IconButton,
   InputAdornment,
 } from '@mui/material'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { MultiAutocompleteField } from '@/components/fields/MultiAutocompleteField'
 import { ACTIVE_FILTER_OPTIONS, type AutocompleteOption } from '@/components/fields/options'
@@ -510,19 +506,23 @@ export default function UsersPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
+      <FilterBar
+        activeCount={(filters.email ? 1 : 0) + (filters.active ? 1 : 0) + (filters.role ? 1 : 0)}
+        primary={
+          <TextField
+            label="Nome"
+            value={filters.name}
+            onChange={(e) => updateFilter({ name: e.target.value })}
+            size="small"
+            fullWidth
+          />
+        }
+      >
         <Stack direction={{ xs: 'column', md: 'row' }} spacing={2}>
           <TextField
             label="E-mail"
             value={filters.email}
             onChange={(e) => updateFilter({ email: e.target.value })}
-            size="small"
-            fullWidth
-          />
-          <TextField
-            label="Nome"
-            value={filters.name}
-            onChange={(e) => updateFilter({ name: e.target.value })}
             size="small"
             fullWidth
           />
@@ -547,7 +547,7 @@ export default function UsersPage() {
             sx={{ minWidth: 200 }}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -561,100 +561,107 @@ export default function UsersPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Nome</TableCell>
-                  <TableCell>E-mail</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Grupos</TableCell>
-                  <TableCell>Criado em</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {users.map((u) => {
+          <DataTable
+            rows={users}
+            getRowKey={(u) => u.id}
+            size="medium"
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (u) => u.name },
+              { key: 'email', header: 'E-mail', render: (u) => u.email },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (u) => (
+                  <Chip
+                    size="small"
+                    label={u.active ? 'Ativo' : 'Inativo'}
+                    color={u.active ? 'success' : 'default'}
+                    variant={u.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'roles',
+                header: 'Grupos',
+                render: (u) => (
+                  <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
+                    {u.roles?.length ? (
+                      u.roles.map((r) => (
+                        <Chip key={r.id} size="small" label={r.name} variant="outlined" />
+                      ))
+                    ) : (
+                      <Box component="span" sx={{ color: 'text.disabled' }}>
+                        —
+                      </Box>
+                    )}
+                  </Stack>
+                ),
+              },
+              {
+                key: 'created',
+                header: 'Criado em',
+                mobileLabel: 'Desde',
+                render: (u) =>
+                  u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '—',
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (u) => {
                   const master = isMaster(u)
                   return (
-                    <TableRow key={u.id} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>{u.name}</TableCell>
-                      <TableCell>{u.email}</TableCell>
-                      <TableCell>
-                        <Chip
-                          size="small"
-                          label={u.active ? 'Ativo' : 'Inativo'}
-                          color={u.active ? 'success' : 'default'}
-                          variant={u.active ? 'filled' : 'outlined'}
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <Stack direction="row" spacing={0.5} flexWrap="wrap" useFlexGap>
-                          {u.roles?.length ? (
-                            u.roles.map((r) => (
-                              <Chip key={r.id} size="small" label={r.name} variant="outlined" />
-                            ))
-                          ) : (
-                            <Box component="span" sx={{ color: 'text.disabled' }}>
-                              —
-                            </Box>
-                          )}
-                        </Stack>
-                      </TableCell>
-                      <TableCell>
-                        {u.created_at ? new Date(u.created_at).toLocaleDateString('pt-BR') : '—'}
-                      </TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Editar nome">
-                          <IconButton size="small" onClick={() => setEditUser(u)}>
-                            <EditRoundedIcon fontSize="small" />
+                    <>
+                      <Tooltip title="Editar nome">
+                        <IconButton size="small" onClick={() => setEditUser(u)}>
+                          <EditRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Atribuir grupos">
+                        <IconButton size="small" onClick={() => setAssignUser(u)}>
+                          <AdminPanelSettingsRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={u.active ? 'Desativar' : 'Ativar'}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color={u.active ? 'warning' : 'success'}
+                            disabled={master && u.active}
+                            onClick={() => setToToggle(u)}
+                          >
+                            {u.active ? (
+                              <ToggleOffRoundedIcon fontSize="small" />
+                            ) : (
+                              <ToggleOnRoundedIcon fontSize="small" />
+                            )}
                           </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Atribuir grupos">
-                          <IconButton size="small" onClick={() => setAssignUser(u)}>
-                            <AdminPanelSettingsRoundedIcon fontSize="small" />
+                        </span>
+                      </Tooltip>
+                      <Tooltip title="Resetar senha">
+                        <IconButton size="small" onClick={() => setResetUser(u)}>
+                          <LockResetRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title={master ? 'Usuário master não pode ser excluído' : 'Excluir'}>
+                        <span>
+                          <IconButton
+                            size="small"
+                            color="error"
+                            disabled={master}
+                            onClick={() => setToDelete(u)}
+                          >
+                            <DeleteOutlineRoundedIcon fontSize="small" />
                           </IconButton>
-                        </Tooltip>
-                        <Tooltip title={u.active ? 'Desativar' : 'Ativar'}>
-                          <span>
-                            <IconButton
-                              size="small"
-                              color={u.active ? 'warning' : 'success'}
-                              disabled={master && u.active}
-                              onClick={() => setToToggle(u)}
-                            >
-                              {u.active ? (
-                                <ToggleOffRoundedIcon fontSize="small" />
-                              ) : (
-                                <ToggleOnRoundedIcon fontSize="small" />
-                              )}
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                        <Tooltip title="Resetar senha">
-                          <IconButton size="small" onClick={() => setResetUser(u)}>
-                            <LockResetRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title={master ? 'Usuário master não pode ser excluído' : 'Excluir'}>
-                          <span>
-                            <IconButton
-                              size="small"
-                              color="error"
-                              disabled={master}
-                              onClick={() => setToDelete(u)}
-                            >
-                              <DeleteOutlineRoundedIcon fontSize="small" />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
+                        </span>
+                      </Tooltip>
+                    </>
                   )
-                })}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                },
+              },
+            ]}
+          />
           <TablePaginationBR
             total={total}
             page={page}

@@ -12,12 +12,6 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -43,6 +37,8 @@ import {
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
@@ -396,8 +392,9 @@ export default function ExamResultsPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={(memberId ? 1 : 0) + (status ? 1 : 0)}
+        primary={
           <TextField
             value={q}
             onChange={(e) => {
@@ -415,6 +412,9 @@ export default function ExamResultsPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Membro"
             size="small"
@@ -443,7 +443,7 @@ export default function ExamResultsPage() {
             loading={resultStatusCatalog.isLoading}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -466,57 +466,92 @@ export default function ExamResultsPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Membro</TableCell>
-                  <TableCell>Data</TableCell>
-                  <TableCell>Itens</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell>Resumo</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {results.map((r) => (
-                  <TableRow key={r.id} hover>
-                    <TableCell sx={{ fontWeight: 600 }}>{memberName(r.family_member_id)}</TableCell>
-                    <TableCell>{formatDateBR(r.exam_date)}</TableCell>
-                    <TableCell>{r.items?.length ?? 0}</TableCell>
-                    <TableCell>
-                      <Chip size="small" label={resultStatusCatalog.labelOf(r.status)} variant="outlined" />
-                    </TableCell>
-                    <TableCell>
-                      <Box sx={{ maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {r.summary || '—'}
-                      </Box>
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Ver itens">
-                        <IconButton
-                          size="small"
-                          onClick={() =>
-                            setDetail({
-                              id: r.id,
-                              title: `${memberName(r.family_member_id)} — ${formatDateBR(r.exam_date)}`,
-                            })
-                          }
-                        >
-                          <VisibilityRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(r)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={results}
+            getRowKey={(r) => r.id}
+            size="medium"
+            onRowClick={(r) =>
+              setDetail({
+                id: r.id,
+                title: `${memberName(r.family_member_id)} — ${formatDateBR(r.exam_date)}`,
+              })
+            }
+            columns={[
+              {
+                key: 'member',
+                header: 'Membro',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (r) => memberName(r.family_member_id),
+              },
+              { key: 'date', header: 'Data', mobile: 'value', render: (r) => formatDateBR(r.exam_date) },
+              {
+                key: 'items',
+                header: 'Itens',
+                mobileLabel: 'Itens',
+                render: (r) => r.items?.length ?? 0,
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (r) => (
+                  <Chip size="small" label={resultStatusCatalog.labelOf(r.status)} variant="outlined" />
+                ),
+              },
+              {
+                key: 'summary',
+                header: 'Resumo',
+                render: (r) => (
+                  <Box
+                    sx={{
+                      maxWidth: { xs: '100%', sm: 260 },
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: { xs: 'normal', sm: 'nowrap' },
+                    }}
+                  >
+                    {r.summary || '—'}
+                  </Box>
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (r) => (
+                  <>
+                    <Tooltip title="Ver itens">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setDetail({
+                            id: r.id,
+                            title: `${memberName(r.family_member_id)} — ${formatDateBR(r.exam_date)}`,
+                          })
+                        }}
+                      >
+                        <VisibilityRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setToDelete(r)
+                        }}
+                      >
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

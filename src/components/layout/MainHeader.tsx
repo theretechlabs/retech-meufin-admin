@@ -41,6 +41,7 @@ export function MainHeader({ title = 'Painel' }: Props) {
       sx={{
         width: { lg: `calc(100% - ${lgWidth}px)` },
         ml: { lg: `${lgWidth}px` },
+        pt: 'env(safe-area-inset-top)',
         transition: (t) =>
           t.transitions.create(['width', 'margin'], { duration: t.transitions.duration.shorter }),
       }}

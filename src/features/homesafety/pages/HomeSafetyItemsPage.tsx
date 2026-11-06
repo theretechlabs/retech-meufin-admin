@@ -17,12 +17,6 @@ import {
   ListItemIcon,
   ListItemText,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -64,6 +58,8 @@ import {
   formatMonths,
   homeSafetyKeys,
 } from '../constants'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -765,8 +761,9 @@ export default function HomeSafetyItemsPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={(categoryFilter ? 1 : 0) + (statusFilter ? 1 : 0)}
+        primary={
           <TextField
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -781,6 +778,9 @@ export default function HomeSafetyItemsPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Categoria"
             size="small"
@@ -804,7 +804,7 @@ export default function HomeSafetyItemsPage() {
             sx={{ minWidth: { sm: 160 } }}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -827,83 +827,105 @@ export default function HomeSafetyItemsPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Item</TableCell>
-                  <TableCell>Categoria</TableCell>
-                  <TableCell>Local</TableCell>
-                  <TableCell>Periodicidade</TableCell>
-                  <TableCell>Vencimento</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {items.map((i) => (
-                  <TableRow key={i.id} hover>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {i.name}
-                        </Typography>
-                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
-                          <Chip
-                            size="small"
-                            variant="outlined"
-                            label={riskType.labelOf(i.risk_type)}
-                            sx={{ fontSize: 10, height: 18 }}
-                          />
-                          <Chip
-                            size="small"
-                            color={PRIORITY_COLOR[i.priority]}
-                            label={priority.labelOf(i.priority)}
-                            sx={{ fontSize: 10, height: 18 }}
-                          />
-                        </Stack>
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{category.labelOf(i.category)}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{i.location ?? '—'}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {i.service_interval_months
-                        ? formatMonths(i.service_interval_months)
-                        : i.lifespan_months
-                          ? `Validade ${formatMonths(i.lifespan_months)}`
-                          : '—'}
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{formatDate(i.next_due_date)}</TableCell>
-                    <TableCell>
+          <DataTable
+            rows={items}
+            getRowKey={(i) => i.id}
+            size="medium"
+            columns={[
+              {
+                key: 'name',
+                header: 'Item',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (i) => (
+                  <>
+                    {i.name}
+                    <Stack component="span" direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
                       <Chip
                         size="small"
-                        label={status.labelOf(i.status)}
-                        color={STATUS_COLOR[i.status]}
-                        variant="filled"
+                        variant="outlined"
+                        label={riskType.labelOf(i.risk_type)}
+                        sx={{ fontSize: 10, height: 18 }}
                       />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Histórico / registrar manutenção">
-                        <IconButton size="small" onClick={() => setHistoryItem(i)}>
-                          <HistoryRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(i)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(i)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                      <Chip
+                        size="small"
+                        color={PRIORITY_COLOR[i.priority]}
+                        label={priority.labelOf(i.priority)}
+                        sx={{ fontSize: 10, height: 18 }}
+                      />
+                    </Stack>
+                  </>
+                ),
+              },
+              {
+                key: 'category',
+                header: 'Categoria',
+                cellSx: { color: 'text.secondary' },
+                render: (i) => category.labelOf(i.category),
+              },
+              {
+                key: 'location',
+                header: 'Local',
+                cellSx: { color: 'text.secondary' },
+                render: (i) => i.location ?? '—',
+              },
+              {
+                key: 'interval',
+                header: 'Periodicidade',
+                cellSx: { color: 'text.secondary' },
+                render: (i) =>
+                  i.service_interval_months
+                    ? formatMonths(i.service_interval_months)
+                    : i.lifespan_months
+                      ? `Validade ${formatMonths(i.lifespan_months)}`
+                      : '—',
+              },
+              {
+                key: 'due',
+                header: 'Vencimento',
+                mobileLabel: 'Vence',
+                cellSx: { color: 'text.secondary' },
+                render: (i) => formatDate(i.next_due_date),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (i) => (
+                  <Chip
+                    size="small"
+                    label={status.labelOf(i.status)}
+                    color={STATUS_COLOR[i.status]}
+                    variant="filled"
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (i) => (
+                  <>
+                    <Tooltip title="Histórico / registrar manutenção">
+                      <IconButton size="small" onClick={() => setHistoryItem(i)}>
+                        <HistoryRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(i)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(i)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
         </Card>
       )}
 

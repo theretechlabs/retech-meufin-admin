@@ -4,7 +4,6 @@ import {
   Box,
   Button,
   Card,
-  CardContent,
   Chip,
   Dialog,
   FormControlLabel,
@@ -17,12 +16,6 @@ import {
   InputAdornment,
   Stack,
   Switch,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -75,11 +68,14 @@ import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import { numericOptions } from '@/components/fields/options'
 import { formatDateBR } from '@/utils/dates'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { DeleteEntryDialog } from '../components/DeleteEntryDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
+import { StatCard } from '@/components/common/StatCard'
 
 const now = new Date()
 
@@ -97,41 +93,6 @@ const initialFilters: Filters = {
   month: now.getMonth() + 1,
   status: '',
   type: '',
-}
-
-// ---------------------------------------------------------------------------
-// Stat card
-// ---------------------------------------------------------------------------
-
-function StatCard({
-  label,
-  value,
-  hint,
-  color,
-}: {
-  label: string
-  value: string
-  /** Uma linha explicando o recorte (eixo, contagem). Evita a leitura errada do número. */
-  hint?: string
-  color?: string
-}) {
-  return (
-    <Card variant="outlined" sx={{ height: '100%' }}>
-      <CardContent>
-        <Typography variant="overline" color="text.secondary">
-          {label}
-        </Typography>
-        <Typography variant="h5" sx={{ fontWeight: 800, color, mt: 0.5 }}>
-          {value}
-        </Typography>
-        {hint && (
-          <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-            {hint}
-          </Typography>
-        )}
-      </CardContent>
-    </Card>
-  )
 }
 
 // ---------------------------------------------------------------------------
@@ -763,7 +724,7 @@ export default function ReceitasPage() {
       {/* Cards de resumo */}
       <Grid container spacing={2} sx={{ mb: 3 }}>
         {/* Eixo competência: o que VENCE no mês — é o que a lista abaixo mostra. */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Receitas do mês"
             value={formatCents(summary?.due.total_cents ?? 0)}
@@ -774,7 +735,7 @@ export default function ReceitasPage() {
             }
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Recebido"
             value={formatCents(summary?.due.paid_cents ?? 0)}
@@ -786,7 +747,7 @@ export default function ReceitasPage() {
             color="success.main"
           />
         </Grid>
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="A receber"
             value={formatCents(summary?.due.open_cents ?? 0)}
@@ -795,7 +756,7 @@ export default function ReceitasPage() {
           />
         </Grid>
         {/* Eixo caixa: o que foi PAGO no mês, qualquer vencimento — o número da dashboard. */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Entrou no caixa"
             value={formatCents(summary?.cash.paid_cents ?? 0)}
@@ -807,7 +768,7 @@ export default function ReceitasPage() {
           />
         </Grid>
         {/* Indicador: juros e multa que entraram a mais por atraso de quem pagou. */}
-        <Grid size={{ xs: 12, sm: 6, md: 2.4 }}>
+        <Grid size={{ xs: 6, sm: 6, md: 2.4 }}>
           <StatCard
             label="Juros e multa recebidos"
             value={formatCents(summary?.cash.late_charges_cents ?? 0)}
@@ -824,83 +785,83 @@ export default function ReceitasPage() {
       </Grid>
 
       {/* Filtros */}
-      <Card sx={{ mb: 3 }}>
-        <CardContent>
-          <Grid container spacing={2}>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <TextField
-                value={query}
-                onChange={(e) => {
-                  setQuery(e.target.value)
-                  setPage(0)
-                }}
-                placeholder="Buscar por descrição…"
-                size="small"
-                fullWidth
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <SearchRoundedIcon fontSize="small" />
-                    </InputAdornment>
-                  ),
-                }}
-              />
-            </Grid>
-            <Grid size={{ xs: 12, sm: 6, md: 3 }}>
-              <AutocompleteField
-                label="Membro"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.family_member_id}
-                onChange={(v) => setFilter('family_member_id', v)}
-                options={(membersQuery.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Mês"
-                size="small"
-                value={String(filters.month)}
-                onChange={(v) => setFilter('month', Number(v))}
-                options={numericOptions(MONTH_OPTIONS)}
-                disableClearable
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 3, md: 2 }}>
-              <AutocompleteField
-                label="Ano"
-                size="small"
-                value={String(filters.year)}
-                onChange={(v) => setFilter('year', Number(v))}
-                options={numericOptions(yearsList)}
-                disableClearable
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 6, md: 2 }}>
-              <AutocompleteField
-                label="Status"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.status}
-                onChange={(v) => setFilter('status', v)}
-                options={entryStatus.options}
-                loading={entryStatus.isLoading}
-              />
-            </Grid>
-            <Grid size={{ xs: 6, sm: 6, md: 3 }}>
-              <AutocompleteField
-                label="Tipo"
-                size="small"
-                emptyLabel="Todos"
-                value={filters.type}
-                onChange={(v) => setFilter('type', v)}
-                options={incomeType.options}
-                loading={incomeType.isLoading}
-              />
-            </Grid>
+      <FilterBar
+        activeCount={Object.entries(filters).filter(([k, v]) => k !== 'month' && k !== 'year' && Boolean(v)).length}
+        primary={
+          <TextField
+            value={query}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setPage(0)
+            }}
+            placeholder="Buscar por descrição…"
+            size="small"
+            fullWidth
+            InputProps={{
+              startAdornment: (
+                <InputAdornment position="start">
+                  <SearchRoundedIcon fontSize="small" />
+                </InputAdornment>
+              ),
+            }}
+          />
+        }
+      >
+        <Grid container spacing={2}>
+          <Grid size={{ xs: 12, sm: 6, md: 3 }}>
+            <AutocompleteField
+              label="Membro"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.family_member_id}
+              onChange={(v) => setFilter('family_member_id', v)}
+              options={(membersQuery.data ?? []).map((m) => ({ value: m.id, label: m.full_name }))}
+            />
           </Grid>
-        </CardContent>
-      </Card>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Mês"
+              size="small"
+              value={String(filters.month)}
+              onChange={(v) => setFilter('month', Number(v))}
+              options={numericOptions(MONTH_OPTIONS)}
+              disableClearable
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 3, md: 2 }}>
+            <AutocompleteField
+              label="Ano"
+              size="small"
+              value={String(filters.year)}
+              onChange={(v) => setFilter('year', Number(v))}
+              options={numericOptions(yearsList)}
+              disableClearable
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 6, md: 2 }}>
+            <AutocompleteField
+              label="Status"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.status}
+              onChange={(v) => setFilter('status', v)}
+              options={entryStatus.options}
+              loading={entryStatus.isLoading}
+            />
+          </Grid>
+          <Grid size={{ xs: 6, sm: 6, md: 3 }}>
+            <AutocompleteField
+              label="Tipo"
+              size="small"
+              emptyLabel="Todos"
+              value={filters.type}
+              onChange={(v) => setFilter('type', v)}
+              options={incomeType.options}
+              loading={incomeType.isLoading}
+            />
+          </Grid>
+        </Grid>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -919,116 +880,132 @@ export default function ReceitasPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Data</TableCell>
-                  <TableCell>Membro</TableCell>
-                  <TableCell>Fonte</TableCell>
-                  <TableCell>Tipo</TableCell>
-                  <TableCell align="right">Valor</TableCell>
-                  <TableCell>Recorrência</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {entries.map((e) => (
-                  <TableRow key={e.id} hover>
-                    <TableCell>{formatDateBR(e.due_date)}</TableCell>
-                    <TableCell>{memberName(e.family_member_id)}</TableCell>
-                    <TableCell>{sourceName(e.source_id)}</TableCell>
-                    <TableCell>{incomeType.labelOf(e.type)}</TableCell>
-                    <TableCell align="right" sx={{ fontWeight: 700 }}>
-                      {formatCents(e.amount_cents)}
-                      {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
-                        <Tooltip
-                          title={`Juros e multa recebidos: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — recebido ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
+          <DataTable
+            rows={entries}
+            getRowKey={(e) => e.id}
+            size="medium"
+            columns={[
+              {
+                key: 'description',
+                header: 'Descrição',
+                mobile: 'title',
+                mobileOnly: true,
+                render: (e) => e.description || sourceName(e.source_id),
+              },
+              { key: 'due', header: 'Data', mobileLabel: 'Data', render: (e) => formatDateBR(e.due_date) },
+              { key: 'member', header: 'Membro', render: (e) => memberName(e.family_member_id) },
+              { key: 'source', header: 'Fonte', render: (e) => sourceName(e.source_id) },
+              { key: 'type', header: 'Tipo', render: (e) => incomeType.labelOf(e.type) },
+              {
+                key: 'amount',
+                header: 'Valor',
+                align: 'right',
+                mobile: 'value',
+                cellSx: { fontWeight: 700 },
+                render: (e) => (
+                  <>
+                    {formatCents(e.amount_cents)}
+                    {(e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0) > 0 ? (
+                      <Tooltip
+                        title={`Juros e multa recebidos: multa ${formatCents(e.late_fee_cents ?? 0)} · juros ${formatCents(e.late_interest_cents ?? 0)} — recebido ${formatCents(e.paid_amount_cents ?? e.amount_cents)}`}
+                      >
+                        <Typography
+                          variant="caption"
+                          display="block"
+                          sx={{ color: 'success.main', fontWeight: 600 }}
                         >
-                          <Typography
-                            variant="caption"
-                            display="block"
-                            sx={{ color: 'success.main', fontWeight: 600 }}
-                          >
-                            +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
-                          </Typography>
-                        </Tooltip>
-                      ) : null}
-                    </TableCell>
-                    <TableCell>
-                      {e.recurrence !== 'none' ? (
-                        <Chip
+                          +{formatCents((e.late_fee_cents ?? 0) + (e.late_interest_cents ?? 0))}
+                        </Typography>
+                      </Tooltip>
+                    ) : null}
+                  </>
+                ),
+              },
+              {
+                key: 'recurrence',
+                header: 'Recorrência',
+                render: (e) =>
+                  e.recurrence !== 'none' ? (
+                    <Chip
+                      size="small"
+                      variant="outlined"
+                      icon={<RepeatRoundedIcon />}
+                      label={recurrence.labelOf(e.recurrence)}
+                    />
+                  ) : (
+                    '—'
+                  ),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (e) => (
+                  <Chip
+                    size="small"
+                    label={entryStatus.labelOf(e.status)}
+                    color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (e) => (
+                  <>
+                    {e.status === 'prevista' && (
+                      <Tooltip title="Confirmar recebimento">
+                        <IconButton size="small" color="success" onClick={() => setToSettle(e)}>
+                          <CheckCircleRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    {e.status === 'realizada' && (
+                      <Tooltip title="Desfazer recebimento">
+                        <IconButton
                           size="small"
-                          variant="outlined"
-                          icon={<RepeatRoundedIcon />}
-                          label={recurrence.labelOf(e.recurrence)}
-                        />
-                      ) : (
-                        '—'
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={entryStatus.labelOf(e.status)}
-                        color={ENTRY_STATUS_COLOR[e.status] ?? 'default'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      {e.status === 'prevista' && (
-                        <Tooltip title="Confirmar recebimento">
-                          <IconButton size="small" color="success" onClick={() => setToSettle(e)}>
-                            <CheckCircleRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {e.status === 'realizada' && (
-                        <Tooltip title="Desfazer recebimento">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            disabled={reopenMutation.isPending}
-                            onClick={() => setToReopen(e)}
-                          >
-                            <UndoRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(e)}>
-                          <EditRoundedIcon fontSize="small" />
+                          color="warning"
+                          disabled={reopenMutation.isPending}
+                          onClick={() => setToReopen(e)}
+                        >
+                          <UndoRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                      {e.status === 'prevista' && (
-                        <Tooltip title="Não houve recebimento neste mês">
-                          <IconButton size="small" onClick={() => setToWaive(e)}>
-                            <MoneyOffRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      {e.status !== 'cancelada' && (
-                        <Tooltip title="Cancelar">
-                          <IconButton
-                            size="small"
-                            color="warning"
-                            onClick={() => setToCancel(e)}
-                          >
-                            <CancelRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      )}
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(e)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
+                    )}
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(e)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    {e.status === 'prevista' && (
+                      <Tooltip title="Não houve recebimento neste mês">
+                        <IconButton size="small" onClick={() => setToWaive(e)}>
+                          <MoneyOffRoundedIcon fontSize="small" />
                         </IconButton>
                       </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                    )}
+                    {e.status !== 'cancelada' && (
+                      <Tooltip title="Cancelar">
+                        <IconButton
+                          size="small"
+                          color="warning"
+                          onClick={() => setToCancel(e)}
+                        >
+                          <CancelRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    )}
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(e)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <Divider />
           <TablePaginationBR
             total={data?.total ?? 0}

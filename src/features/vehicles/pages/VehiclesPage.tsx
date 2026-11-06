@@ -13,12 +13,6 @@ import {
   IconButton,
   InputAdornment,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -50,6 +44,8 @@ import {
 import { errorMessage, vehicleKeys, VEHICLE_STATUS_COLOR, formatKM } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '@/features/health/components/PageHeader'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
@@ -700,8 +696,9 @@ export default function VehiclesPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={statusFilter ? 1 : 0}
+        primary={
           <TextField
             value={q}
             onChange={(e) => {
@@ -719,6 +716,9 @@ export default function VehiclesPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Status"
             size="small"
@@ -734,7 +734,7 @@ export default function VehiclesPage() {
             loading={vehicleStatus.isLoading}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -757,79 +757,102 @@ export default function VehiclesPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Veículo</TableCell>
-                  <TableCell>Ano</TableCell>
-                  <TableCell>Placa</TableCell>
-                  <TableCell>Combustível</TableCell>
-                  <TableCell>Odômetro</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {vehicles.map((v) => (
-                  <TableRow key={v.id} hover>
-                    <TableCell>
-                      <Box>
-                        <Typography variant="body2" fontWeight={600}>
-                          {v.nickname ?? `${v.make} ${v.model}`}
-                        </Typography>
-                        {v.nickname && (
-                          <Typography variant="caption" color="text.secondary">
-                            {v.make} {v.model}
-                          </Typography>
-                        )}
-                      </Box>
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{v.year_model}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>{v.plate ?? '—'}</TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {fuelType.labelOf(v.fuel_type)}
-                    </TableCell>
-                    <TableCell sx={{ color: 'text.secondary' }}>
-                      {formatKM(v.current_odometer)}
-                    </TableCell>
-                    <TableCell>
-                      <Chip
+          <DataTable
+            rows={vehicles}
+            getRowKey={(v) => v.id}
+            size="medium"
+            columns={[
+              {
+                key: 'vehicle',
+                header: 'Veículo',
+                mobile: 'title',
+                cellSx: { fontWeight: 600 },
+                render: (v) => (
+                  <>
+                    {v.nickname ?? `${v.make} ${v.model}`}
+                    {v.nickname && (
+                      <Typography
+                        component="span"
+                        variant="caption"
+                        color="text.secondary"
+                        sx={{ display: 'block' }}
+                      >
+                        {v.make} {v.model}
+                      </Typography>
+                    )}
+                  </>
+                ),
+              },
+              {
+                key: 'year',
+                header: 'Ano',
+                cellSx: { color: 'text.secondary' },
+                render: (v) => v.year_model,
+              },
+              {
+                key: 'plate',
+                header: 'Placa',
+                cellSx: { color: 'text.secondary' },
+                render: (v) => v.plate ?? '—',
+              },
+              {
+                key: 'fuel',
+                header: 'Combustível',
+                cellSx: { color: 'text.secondary' },
+                render: (v) => fuelType.labelOf(v.fuel_type),
+              },
+              {
+                key: 'odometer',
+                header: 'Odômetro',
+                cellSx: { color: 'text.secondary' },
+                render: (v) => formatKM(v.current_odometer),
+              },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (v) => (
+                  <Chip
+                    size="small"
+                    label={vehicleStatus.labelOf(v.status)}
+                    color={VEHICLE_STATUS_COLOR[v.status]}
+                    variant="filled"
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (v) => (
+                  <>
+                    <Tooltip title="Ver detalhes">
+                      <IconButton
                         size="small"
-                        label={vehicleStatus.labelOf(v.status)}
-                        color={VEHICLE_STATUS_COLOR[v.status]}
-                        variant="filled"
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Ver detalhes">
-                        <IconButton
-                          size="small"
-                          onClick={() => navigate(`/dashboard/frota/veiculos/${v.id}`)}
-                        >
-                          <OpenInNewRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(v)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton
-                          size="small"
-                          color="error"
-                          onClick={() => setToDelete(v)}
-                        >
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+                        onClick={() => navigate(`/dashboard/frota/veiculos/${v.id}`)}
+                      >
+                        <OpenInNewRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(v)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={() => setToDelete(v)}
+                      >
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

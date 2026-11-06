@@ -7,16 +7,8 @@ import {
   Divider,
   IconButton,
   Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Tooltip,
   Typography,
-  useMediaQuery,
-  useTheme,
 } from "@mui/material";
 import { AttachFileButton } from "@/components/common/AttachFileButton";
 import { AutocompleteField } from "@/components/fields/AutocompleteField";
@@ -38,6 +30,7 @@ import { PageHeader } from "../components/PageHeader";
 import { EmptyState, ErrorState, LoadingState } from "../components/StateViews";
 import { ConfirmDialog } from "../components/ConfirmDialog";
 import { TablePaginationBR } from "@/components/tables/TablePaginationBR";
+import { DataTable } from "@/components/tables/DataTable";
 import { useToast } from "@/providers/ToastProvider";
 import { formatDateTimeBR } from "@/utils/dates";
 
@@ -72,13 +65,11 @@ function GroupLabel({ children }: { children: string }) {
  * (sem extração — para anexos como imagens de ressonância/radiografia).
  *
  * Layout responsivo: filtros e upload em grid (campos ocupam a célula inteira,
- * nunca encolhem); no celular a tabela vira lista de cards.
+ * nunca encolhem); no celular a DataTable vira lista de cards.
  */
 export default function HealthDocumentsPage() {
   const qc = useQueryClient();
   const { show } = useToast();
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
   const documentType = useCatalog("health.document_type");
   const [memberId, setMemberId] = useState("");
   const [docType, setDocType] = useState("");
@@ -306,90 +297,70 @@ export default function HealthDocumentsPage() {
         />
       ) : (
         <Card>
-          {isMobile ? (
-            <Stack divider={<Divider />}>
-              {docs.map((d) => (
-                <Box key={d.id} sx={{ p: 2 }}>
-                  <Stack direction="row" spacing={1} alignItems="flex-start">
-                    <Typography
-                      variant="body2"
-                      sx={{
-                        fontWeight: 600,
-                        flex: 1,
-                        minWidth: 0,
-                        overflowWrap: "anywhere",
-                      }}
-                    >
-                      {fileName(d)}
-                    </Typography>
-                    {actions(d)}
-                  </Stack>
-                  <Stack
-                    direction="row"
-                    spacing={1}
-                    flexWrap="wrap"
-                    useFlexGap
-                    sx={{ mt: 1 }}
-                  >
-                    {typeChip(d)}
-                    {linkChip(d)}
-                  </Stack>
+          <DataTable
+            rows={docs}
+            getRowKey={(d) => d.id}
+            size="medium"
+            columns={[
+              {
+                key: "file",
+                header: "Arquivo",
+                mobile: "title",
+                cellSx: { fontWeight: 600, maxWidth: 280 },
+                render: (d) => (
                   <Typography
-                    variant="caption"
-                    color="text.secondary"
-                    sx={{ display: "block", mt: 1 }}
+                    component="span"
+                    variant="body2"
+                    title={d.original_file_name ?? ""}
+                    sx={{
+                      display: "block",
+                      fontWeight: "inherit",
+                      overflowWrap: "anywhere",
+                      whiteSpace: { sm: "nowrap" },
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
                   >
-                    {memberName(d.family_member_id)} ·{" "}
-                    {formatSize(d.size_bytes)} ·{" "}
-                    {formatDateTimeBR(d.created_at)}
+                    {fileName(d)}
                   </Typography>
-                </Box>
-              ))}
-            </Stack>
-          ) : (
-            <TableContainer>
-              <Table>
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Arquivo</TableCell>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Membro</TableCell>
-                    <TableCell>Vínculo</TableCell>
-                    <TableCell>Tamanho</TableCell>
-                    <TableCell>Enviado em</TableCell>
-                    <TableCell align="right">Ações</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {docs.map((d) => (
-                    <TableRow key={d.id} hover>
-                      <TableCell sx={{ fontWeight: 600, maxWidth: 280 }}>
-                        <Typography
-                          variant="body2"
-                          noWrap
-                          title={d.original_file_name ?? ""}
-                        >
-                          {fileName(d)}
-                        </Typography>
-                      </TableCell>
-                      <TableCell>{typeChip(d)}</TableCell>
-                      <TableCell>{memberName(d.family_member_id)}</TableCell>
-                      <TableCell>
-                        {linkChip(d) ?? (
-                          <Typography variant="caption" color="text.secondary">
-                            —
-                          </Typography>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatSize(d.size_bytes)}</TableCell>
-                      <TableCell>{formatDateTimeBR(d.created_at)}</TableCell>
-                      <TableCell align="right">{actions(d)}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          )}
+                ),
+              },
+              { key: "type", header: "Tipo", render: (d) => typeChip(d) },
+              {
+                key: "member",
+                header: "Membro",
+                render: (d) => memberName(d.family_member_id),
+              },
+              {
+                key: "link",
+                header: "Vínculo",
+                render: (d) =>
+                  linkChip(d) ?? (
+                    <Typography variant="caption" color="text.secondary">
+                      —
+                    </Typography>
+                  ),
+              },
+              {
+                key: "size",
+                header: "Tamanho",
+                render: (d) => formatSize(d.size_bytes),
+              },
+              {
+                key: "created",
+                header: "Enviado em",
+                mobileLabel: "Enviado",
+                render: (d) => formatDateTimeBR(d.created_at),
+              },
+              {
+                key: "actions",
+                header: "Ações",
+                align: "right",
+                mobile: "actions",
+                render: (d) => actions(d),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}

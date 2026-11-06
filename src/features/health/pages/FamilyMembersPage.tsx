@@ -14,12 +14,6 @@ import {
   Stack,
   Switch,
   FormControlLabel,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   TextField,
   Tooltip,
   Typography,
@@ -50,6 +44,8 @@ import { ACTIVE_FILTER_OPTIONS } from '@/components/fields/options'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { errorMessage, healthKeys } from '../constants'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
+import { DataTable } from '@/components/tables/DataTable'
+import { FilterBar } from '@/components/common/FilterBar'
 import { PageHeader } from '../components/PageHeader'
 import { ConfirmDialog } from '../components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '../components/StateViews'
@@ -461,8 +457,9 @@ export default function FamilyMembersPage() {
         }
       />
 
-      <Card sx={{ p: 2, mb: 2 }}>
-        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+      <FilterBar
+        activeCount={(relationship ? 1 : 0) + (status ? 1 : 0)}
+        primary={
           <TextField
             value={q}
             onChange={(e) => {
@@ -480,6 +477,9 @@ export default function FamilyMembersPage() {
               ),
             }}
           />
+        }
+      >
+        <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
           <AutocompleteField
             label="Parentesco"
             size="small"
@@ -508,7 +508,7 @@ export default function FamilyMembersPage() {
             options={ACTIVE_FILTER_OPTIONS}
           />
         </Stack>
-      </Card>
+      </FilterBar>
 
       {isLoading ? (
         <LoadingState />
@@ -531,70 +531,78 @@ export default function FamilyMembersPage() {
         />
       ) : (
         <Card>
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell sx={{ width: 56 }} />
-                  <TableCell>Nome</TableCell>
-                  <TableCell>Parentesco</TableCell>
-                  <TableCell>Nascimento</TableCell>
-                  <TableCell align="center">Idade</TableCell>
-                  <TableCell>Medidas</TableCell>
-                  <TableCell>Documento</TableCell>
-                  <TableCell>Status</TableCell>
-                  <TableCell align="right">Ações</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {members.map((m) => (
-                  <TableRow key={m.id} hover>
-                    <TableCell sx={{ width: 56 }}>
-                      <Avatar
-                        src={m.avatar_url ?? undefined}
-                        sx={{ width: 40, height: 40, fontSize: '0.9rem', fontWeight: 700 }}
-                      >
-                        {memberInitials(m.full_name)}
-                      </Avatar>
-                    </TableCell>
-                    <TableCell sx={{ fontWeight: 600 }}>{m.full_name}</TableCell>
-                    <TableCell>{relationshipCatalog.labelOf(m.relationship)}</TableCell>
-                    <TableCell>{formatBirthDate(m.birth_date)}</TableCell>
-                    <TableCell align="center">
-                      {m.age != null ? `${m.age} anos` : '—'}
-                    </TableCell>
-                    <TableCell>{formatMeasures(m)}</TableCell>
-                    <TableCell>{m.document || '—'}</TableCell>
-                    <TableCell>
-                      <Chip
-                        size="small"
-                        label={m.active ? 'Ativo' : 'Inativo'}
-                        color={m.active ? 'success' : 'default'}
-                        variant={m.active ? 'filled' : 'outlined'}
-                      />
-                    </TableCell>
-                    <TableCell align="right">
-                      <Tooltip title="Documentos">
-                        <IconButton size="small" onClick={() => setDocsFor(m)}>
-                          <FolderSharedRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Editar">
-                        <IconButton size="small" onClick={() => openEdit(m)}>
-                          <EditRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                      <Tooltip title="Excluir">
-                        <IconButton size="small" color="error" onClick={() => setToDelete(m)}>
-                          <DeleteOutlineRoundedIcon fontSize="small" />
-                        </IconButton>
-                      </Tooltip>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </TableContainer>
+          <DataTable
+            rows={members}
+            getRowKey={(m) => m.id}
+            size="medium"
+            leading={(m) => (
+              <Avatar
+                src={m.avatar_url ?? undefined}
+                sx={{ width: 40, height: 40, fontSize: '0.9rem', fontWeight: 700 }}
+              >
+                {memberInitials(m.full_name)}
+              </Avatar>
+            )}
+            columns={[
+              { key: 'name', header: 'Nome', mobile: 'title', cellSx: { fontWeight: 600 }, render: (m) => m.full_name },
+              {
+                key: 'relationship',
+                header: 'Parentesco',
+                render: (m) => relationshipCatalog.labelOf(m.relationship),
+              },
+              {
+                key: 'birth',
+                header: 'Nascimento',
+                mobileLabel: 'Nasc.',
+                render: (m) => formatBirthDate(m.birth_date),
+              },
+              {
+                key: 'age',
+                header: 'Idade',
+                align: 'center',
+                render: (m) => (m.age != null ? `${m.age} anos` : '—'),
+              },
+              { key: 'measures', header: 'Medidas', render: (m) => formatMeasures(m) },
+              { key: 'document', header: 'Documento', mobile: 'hidden', render: (m) => m.document || '—' },
+              {
+                key: 'status',
+                header: 'Status',
+                render: (m) => (
+                  <Chip
+                    size="small"
+                    label={m.active ? 'Ativo' : 'Inativo'}
+                    color={m.active ? 'success' : 'default'}
+                    variant={m.active ? 'filled' : 'outlined'}
+                  />
+                ),
+              },
+              {
+                key: 'actions',
+                header: 'Ações',
+                align: 'right',
+                mobile: 'actions',
+                render: (m) => (
+                  <>
+                    <Tooltip title="Documentos">
+                      <IconButton size="small" onClick={() => setDocsFor(m)}>
+                        <FolderSharedRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Editar">
+                      <IconButton size="small" onClick={() => openEdit(m)}>
+                        <EditRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                    <Tooltip title="Excluir">
+                      <IconButton size="small" color="error" onClick={() => setToDelete(m)}>
+                        <DeleteOutlineRoundedIcon fontSize="small" />
+                      </IconButton>
+                    </Tooltip>
+                  </>
+                ),
+              },
+            ]}
+          />
           <TablePaginationBR
             total={data?.total ?? 0}
             page={page}
