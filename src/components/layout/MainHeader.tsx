@@ -11,6 +11,7 @@ import {
 } from '@mui/material'
 import MenuRoundedIcon from '@mui/icons-material/MenuRounded'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
+import { Link as RouterLink } from 'react-router-dom'
 import { ThemeToggle } from './ThemeToggle'
 import { UserMenu } from './UserMenu'
 import { AppLogo } from './AppLogo'
@@ -57,9 +58,14 @@ export function MainHeader({ title = 'Painel' }: Props) {
           <MenuRoundedIcon />
         </IconButton>
 
-        {/* Logo compacta só no mobile (no desktop a rail já mostra a logo) */}
+        {/* Logo compacta só no mobile (no desktop a rail já mostra a logo): leva à home */}
         {!isLg && (
-          <Box sx={{ display: 'flex', alignItems: 'center' }}>
+          <Box
+            component={RouterLink}
+            to="/dashboard"
+            aria-label="Ir para o painel"
+            sx={{ display: 'flex', alignItems: 'center', borderRadius: 2, p: 0.5, m: -0.5 }}
+          >
             <AppLogo compact />
           </Box>
         )}
