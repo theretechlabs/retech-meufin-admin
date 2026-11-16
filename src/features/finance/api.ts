@@ -905,6 +905,8 @@ export type DebtLineage = {
   predecessor_group_id?: string | null
   asset_type?: AssetType | null
   asset_id?: string | null
+  /** Contrato de financiamento da dívida (só vem na consulta por bem). */
+  contract?: FinancingContract | null
 }
 
 /** Linhagem a partir de QUALQUER grupo da cadeia (original ou de um acordo). */
@@ -1022,6 +1024,87 @@ export async function linkInstallmentGroupAsset(
 export async function getAssetDebts(assetType: AssetType, assetId: string): Promise<AssetDebts> {
   const { data } = await meufinClient.get<AssetDebts>(`${BASE}/assets/${assetType}/${assetId}/debts`)
   return data
+}
+
+// ---------------------------------------------------------------------------
+// Contrato de financiamento de um bem (imóvel/veículo)
+// ---------------------------------------------------------------------------
+
+/** Dados do contrato que podem ser corrigidos depois do cadastro. */
+export type FinancingTerms = {
+  contract_number?: string | null
+  purchase_date?: string | null
+  financed_cents?: number | null
+  down_payment_cents?: number | null
+  /** Taxas anuais em ppm da fração: 4,5939% a.a. = 45939. */
+  nominal_rate_ppm?: number | null
+  effective_rate_ppm?: number | null
+  effective_relationship_rate_ppm?: number | null
+  /** Saldo devedor informado pelo banco (não é a soma das parcelas em aberto). */
+  balance_cents?: number | null
+  balance_date?: string | null
+  /** Prestação debitada em conta: as parcelas são liquidadas sozinhas no vencimento. */
+  auto_debit: boolean
+  auto_debit_account_id?: string | null
+  notes?: string | null
+}
+
+export type FinancingContract = FinancingTerms & {
+  id: string
+  asset_type: AssetType
+  asset_id: string
+  /** Série raiz das parcelas (a vigente pode ser outra após renegociação). */
+  group_id: string
+  supplier_id?: string | null
+  description: string
+  term_months: number
+  installment_cents: number
+  reference_date: string
+  reference_installment: number
+  remaining_months: number
+  first_due_date: string
+  auto_debit_since?: string | null
+}
+
+export type CreateFinancingInput = FinancingTerms & {
+  asset_type: AssetType
+  asset_id: string
+  supplier_id?: string | null
+  description: string
+  term_months: number
+  installment_cents: number
+  /** Vencimento e número da parcela atual: a série é montada a partir dela. */
+  reference_date: string
+  reference_installment: number
+  /** Parcelas anteriores à atual nascem pagas no vencimento, pelo valor base. */
+  settle_past: boolean
+}
+
+/** Registra o contrato e gera a série inteira de parcelas vinculada ao bem. */
+export async function createFinancing(
+  input: CreateFinancingInput
+): Promise<{ contract: FinancingContract; created: number; settled: number }> {
+  const { data } = await meufinClient.post(`${BASE}/financings`, input)
+  return data
+}
+
+export async function updateFinancing(id: string, terms: FinancingTerms): Promise<FinancingContract> {
+  const { data } = await meufinClient.put<FinancingContract>(`${BASE}/financings/${id}`, terms)
+  return data
+}
+
+/** Novo valor da prestação para as parcelas em aberto a partir de `from_date`. */
+export async function readjustFinancing(
+  id: string,
+  input: { installment_cents: number; from_date: string }
+): Promise<{ contract: FinancingContract; updated: number }> {
+  const { data } = await meufinClient.post(`${BASE}/financings/${id}/readjust`, input)
+  return data
+}
+
+/** Remove o contrato e a série inteira de parcelas (inclusive as pagas). */
+export async function deleteFinancing(id: string): Promise<void> {
+  await meufinClient.delete(`${BASE}/financings/${id}`)
 }
 
 /**

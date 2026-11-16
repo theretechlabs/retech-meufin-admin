@@ -93,13 +93,12 @@ import {
   VEHICLE_STATUS_COLOR,
 } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
-import { getSupplier, listSuppliers, listSuppliersPaged } from '@/features/finance/api'
-import { financeKeys } from '@/features/finance/constants'
+import { listSuppliers } from '@/features/finance/api'
+import { AssetFinanceTab } from '@/features/finance/components/AssetFinanceTab'
 import { AssetSwapDialog } from '@/features/finance/components/AssetSwapDialog'
+import { SupplierField } from '@/features/finance/components/SupplierField'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
-import { AsyncAutocompleteField } from '@/components/fields/AsyncAutocompleteField'
 import { numericOptions } from '@/components/fields/options'
-import { VehicleFinanceTab } from '../components/VehicleFinanceTab'
 import { CatalogItemField } from '../components/CatalogItemField'
 import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
 import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
@@ -197,18 +196,6 @@ const emptyItemRow: MaintenanceItemFormRow = {
   replacement_interval_months: '',
   warranty_expires_km: '',
   notes: '',
-}
-
-/** Busca paginada de fornecedores ativos para o campo "Fornecedor / Oficina". */
-async function searchSuppliers(query: string) {
-  const { items } = await listSuppliersPaged({ query, limit: 20, offset: 0, active: true })
-  return items.map((s) => ({ value: s.id, label: s.name }))
-}
-
-/** Rótulo do fornecedor já salvo na OS (pode estar inativo; o GET por id resolve). */
-async function resolveSupplier(id: string) {
-  const s = await getSupplier(id)
-  return { value: s.id, label: s.name }
 }
 
 type MaintenanceFormValues = {
@@ -467,14 +454,7 @@ function MaintenanceFormDialog({
               />
             </Grid>
             <Grid size={{ xs: 12, sm: 6, md: 4 }}>
-              <AsyncAutocompleteField
-                label="Fornecedor / Oficina"
-                value={supplierId}
-                onChange={(v) => setSupplierId(v)}
-                queryKey={financeKeys.suppliers()}
-                search={searchSuppliers}
-                resolve={resolveSupplier}
-              />
+              <SupplierField label="Fornecedor / Oficina" value={supplierId} onChange={setSupplierId} />
             </Grid>
             <Grid size={{ xs: 12 }}>
               <Controller
@@ -1752,7 +1732,15 @@ export default function VehicleDetailPage() {
       </Box>
 
       {tab === 0 && <MaintenanceTab vehicleId={vehicle.id} currentKM={vehicle.current_odometer} />}
-      {tab === 1 && <VehicleFinanceTab vehicleId={vehicle.id} vehicleStatus={vehicle.status} />}
+      {tab === 1 && (
+        <AssetFinanceTab
+          assetType="vehicle"
+          assetId={vehicle.id}
+          assetName={vehicle.nickname ?? `${vehicle.make} ${vehicle.model}`}
+          purchaseDate={vehicle.acquisition_date}
+          canSwap={vehicle.status === 'active'}
+        />
+      )}
       {tab === 2 && <SchedulesTab vehicleId={vehicle.id} />}
       {tab === 3 && <AnalyticsTab vehicleId={vehicle.id} />}
       {tab === 4 && <AlertsTab vehicleId={vehicle.id} />}
