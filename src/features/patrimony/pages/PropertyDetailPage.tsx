@@ -6,16 +6,19 @@ import EditRoundedIcon from '@mui/icons-material/EditRounded'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { AssetFinanceTab } from '@/features/finance/components/AssetFinanceTab'
 import { ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { getProperty } from '../api'
 import { errorMessage, patrimonyKeys } from '../constants'
 import { AssetTaxesList } from '../components/AssetTaxesList'
+import { PropertyDebtStats } from '../components/PropertyDebtStats'
 import { PropertyDocumentsPanel } from '../components/PropertyDocumentsPanel'
 import { PropertyFormDialog } from '../components/PropertyFormDialog'
 import { PropertySummaryTab } from '../components/PropertySummaryTab'
 
 const TABS = [
   { slug: 'resumo', label: 'Resumo' },
+  { slug: 'financiamento', label: 'Financiamento' },
   { slug: 'impostos', label: 'Impostos e taxas' },
   { slug: 'documentos', label: 'Documentos' },
 ] as const
@@ -98,7 +101,22 @@ export default function PropertyDetailPage() {
         </Tabs>
       </Box>
 
-      {tab === 'resumo' && <PropertySummaryTab property={property} />}
+      {tab === 'resumo' && (
+        <PropertySummaryTab
+          property={property}
+          extraStats={
+            <PropertyDebtStats propertyId={property.id} currentValueCents={property.current_value_cents} />
+          }
+        />
+      )}
+      {tab === 'financiamento' && (
+        <AssetFinanceTab
+          assetType="property"
+          assetId={property.id}
+          assetName={property.name}
+          purchaseDate={property.purchase_date}
+        />
+      )}
       {tab === 'impostos' && (
         <AssetTaxesList
           propertyId={property.id}

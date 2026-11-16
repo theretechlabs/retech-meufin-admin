@@ -241,8 +241,9 @@ export default function PropertiesPage() {
         <PropertyFormDialog
           property={editing}
           onClose={() => setFormOpen(false)}
-          // Recém-cadastrado: abre o imóvel para seguir com valores, impostos e documentos.
-          onCreated={(created) => navigate(detailPath(created.id))}
+          // Recém-cadastrado: abre o imóvel já na aba de financiamento — é o
+          // próximo passo natural (quitado, basta trocar de aba).
+          onCreated={(created) => navigate(`${detailPath(created.id)}?aba=financiamento`)}
         />
       )}
 

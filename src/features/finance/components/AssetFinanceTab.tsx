@@ -18,50 +18,141 @@ import {
   Typography,
 } from '@mui/material'
 import AccountTreeRoundedIcon from '@mui/icons-material/AccountTreeRounded'
+import AddRoundedIcon from '@mui/icons-material/AddRounded'
+import AutorenewRoundedIcon from '@mui/icons-material/AutorenewRounded'
 import CheckCircleRoundedIcon from '@mui/icons-material/CheckCircleRounded'
+import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
+import EditRoundedIcon from '@mui/icons-material/EditRounded'
 import LinkRoundedIcon from '@mui/icons-material/LinkRounded'
 import SwapHorizRoundedIcon from '@mui/icons-material/SwapHorizRounded'
+import TrendingUpRoundedIcon from '@mui/icons-material/TrendingUpRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useCatalog } from '@/lib/catalogs/useCatalog'
+import { AutocompleteField } from '@/components/fields/AutocompleteField'
+import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
+import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
+import { useToast } from '@/providers/ToastProvider'
 import {
+  deleteFinancing,
   formatCents,
   getAssetDebts,
   getInstallmentsProjection,
+  getSupplier,
   linkInstallmentGroupAsset,
+  type AssetType,
   type DebtLineage,
+  type FinancingContract,
   type Renegotiation,
-} from '@/features/finance/api'
-import { errorMessage, financeKeys } from '@/features/finance/constants'
-import { useCatalog } from '@/lib/catalogs/useCatalog'
-import { AssetSwapDialog } from '@/features/finance/components/AssetSwapDialog'
-import { DebtLineageDialog } from '@/features/finance/components/DebtLineageDialog'
-import { PayoffDialog } from '@/features/finance/components/PayoffDialog'
-import { AutocompleteField } from '@/components/fields/AutocompleteField'
-import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
-import { useToast } from '@/providers/ToastProvider'
-import { vehicleKeys } from '../constants'
+} from '../api'
+import { errorMessage, financeKeys } from '../constants'
+import { formatDateBR, formatOptionalCents, formatRatePPM } from '../financing'
+import { AssetSwapDialog } from './AssetSwapDialog'
+import { DebtLineageDialog } from './DebtLineageDialog'
+import { FinancingContractDialog } from './FinancingContractDialog'
+import { FinancingReadjustDialog } from './FinancingReadjustDialog'
+import { PayoffDialog } from './PayoffDialog'
 
-function formatDateBR(iso?: string | null): string {
-  if (!iso || iso.length < 10) return '—'
-  return `${iso.slice(8, 10)}/${iso.slice(5, 7)}/${iso.slice(0, 4)}`
+/** Próxima parcela em aberto da série vigente. */
+function nextOpenInstallment(debt: DebtLineage) {
+  const last = debt.stages[debt.stages.length - 1]
+  return last?.entries.find((e) => e.status === 'prevista' && e.installment_number != null) ?? null
+}
+
+function ContractItem({ label, value, hint }: { label: string; value: string; hint?: string }) {
+  return (
+    <Grid size={{ xs: 6, sm: 3 }}>
+      <Typography variant="caption" color="text.secondary" display="block">
+        {label}
+      </Typography>
+      <Typography variant="body2" fontWeight={700}>
+        {value}
+      </Typography>
+      {hint && (
+        <Typography variant="caption" color="text.secondary">
+          {hint}
+        </Typography>
+      )}
+    </Grid>
+  )
+}
+
+/** Dados do contrato de financiamento: banco, posição e taxas. */
+function ContractDetails({ contract, debt }: { contract: FinancingContract; debt: DebtLineage }) {
+  const supplierQ = useQuery({
+    queryKey: [...financeKeys.suppliers(), 'by-id', contract.supplier_id] as const,
+    queryFn: () => getSupplier(contract.supplier_id!),
+    enabled: Boolean(contract.supplier_id),
+  })
+  const next = nextOpenInstallment(debt)
+  return (
+    <Box sx={{ p: 1.5, borderRadius: 1, bgcolor: 'action.hover' }}>
+      <Grid container spacing={2}>
+        <ContractItem
+          label="Banco"
+          value={supplierQ.data?.name ?? '—'}
+          hint={contract.contract_number ? `Contrato ${contract.contract_number}` : undefined}
+        />
+        <ContractItem
+          label="Saldo devedor"
+          value={formatOptionalCents(contract.balance_cents)}
+          hint={contract.balance_date ? `informado em ${formatDateBR(contract.balance_date)}` : 'não informado'}
+        />
+        <ContractItem
+          label="Próxima prestação"
+          value={next ? formatCents(next.amount_cents) : '—'}
+          hint={
+            next
+              ? `${next.installment_number}/${next.installment_total} · vence ${formatDateBR(next.due_date)}`
+              : undefined
+          }
+        />
+        <ContractItem
+          label="Prazo restante"
+          value={`${debt.open_count} meses`}
+          hint={`de ${contract.term_months} contratados`}
+        />
+        <ContractItem label="Valor financiado" value={formatOptionalCents(contract.financed_cents)} />
+        <ContractItem label="Entrada" value={formatOptionalCents(contract.down_payment_cents)} />
+        <ContractItem label="Juros nominais" value={formatRatePPM(contract.nominal_rate_ppm)} />
+        <ContractItem
+          label="Juros efetivos"
+          value={formatRatePPM(contract.effective_rate_ppm)}
+          hint={
+            contract.effective_relationship_rate_ppm != null
+              ? `${formatRatePPM(contract.effective_relationship_rate_ppm)} com relacionamento`
+              : undefined
+          }
+        />
+      </Grid>
+    </Box>
+  )
 }
 
 function DebtCard({
   debt,
-  vehicleId,
+  assetId,
   onLineage,
   onPayoff,
   onSwap,
+  onEditContract,
+  onReadjust,
+  onDeleteContract,
 }: {
   debt: DebtLineage
-  vehicleId: string
+  assetId: string
   onLineage: () => void
   onPayoff: () => void
-  onSwap: () => void
+  /** Ausente quando o bem não admite troca (imóvel). */
+  onSwap?: () => void
+  onEditContract: () => void
+  onReadjust: () => void
+  onDeleteContract: () => void
 }) {
   const pct = debt.current_total_cents > 0 ? Math.min(100, Math.round((debt.paid_cents / debt.current_total_cents) * 100)) : 0
   const closed = debt.closed_by
   const last = debt.stages[debt.stages.length - 1]
-  const isSuccessorOfThisVehicle = closed?.kind === 'troca_bem' && closed.new_asset_id === vehicleId
+  const isSuccessorOfThisAsset = closed?.kind === 'troca_bem' && closed.new_asset_id === assetId
+  const contract = debt.contract ?? null
 
   return (
     <Card variant="outlined">
@@ -72,6 +163,9 @@ function DebtCard({
               {debt.description}
             </Typography>
             {!debt.settled && <Chip size="small" color="primary" label="Vigente" />}
+            {contract?.auto_debit && !debt.settled && (
+              <Chip size="small" variant="outlined" icon={<AutorenewRoundedIcon />} label="Débito automático" />
+            )}
             {debt.settled && closed && (
               <Chip
                 size="small"
@@ -84,7 +178,7 @@ function DebtCard({
             {debt.renegotiation_count > 0 && (
               <Chip size="small" variant="outlined" label={`${debt.renegotiation_count} renegociação(ões)`} />
             )}
-            {debt.origin_event && !isSuccessorOfThisVehicle && (
+            {debt.origin_event && !isSuccessorOfThisAsset && (
               <Chip size="small" variant="outlined" label="Nasceu de uma troca" />
             )}
           </Stack>
@@ -93,10 +187,12 @@ function DebtCard({
             {last.installment_total}× · {formatDateBR(last.first_due_date)} a {formatDateBR(last.last_due_date)}
           </Typography>
 
+          {contract && <ContractDetails contract={contract} debt={debt} />}
+
           <Grid container spacing={2}>
             <Grid size={{ xs: 6, sm: 3 }}>
               <Typography variant="caption" color="text.secondary" display="block">
-                Total da dívida
+                {contract ? 'Soma das parcelas' : 'Total da dívida'}
               </Typography>
               <Typography variant="h6" fontWeight={800}>
                 {formatCents(debt.current_total_cents)}
@@ -147,8 +243,25 @@ function DebtCard({
                 <Button size="small" startIcon={<CheckCircleRoundedIcon />} onClick={onPayoff}>
                   Quitar
                 </Button>
-                <Button size="small" startIcon={<SwapHorizRoundedIcon />} onClick={onSwap}>
-                  Troquei o veículo
+                {onSwap && (
+                  <Button size="small" startIcon={<SwapHorizRoundedIcon />} onClick={onSwap}>
+                    Troquei o veículo
+                  </Button>
+                )}
+                {contract && (
+                  <Button size="small" startIcon={<TrendingUpRoundedIcon />} onClick={onReadjust}>
+                    Reajustar prestação
+                  </Button>
+                )}
+              </>
+            )}
+            {contract && (
+              <>
+                <Button size="small" startIcon={<EditRoundedIcon />} onClick={onEditContract}>
+                  Editar contrato
+                </Button>
+                <Button size="small" color="error" startIcon={<DeleteOutlineRoundedIcon />} onClick={onDeleteContract}>
+                  Excluir
                 </Button>
               </>
             )}
@@ -159,7 +272,7 @@ function DebtCard({
   )
 }
 
-function EventsTable({ events, vehicleId }: { events: Renegotiation[]; vehicleId: string }) {
+function EventsTable({ events, assetId }: { events: Renegotiation[]; assetId: string }) {
   const renegotiationKind = useCatalog('finance.renegotiation_kind')
   return (
     <TableContainer sx={{ border: 1, borderColor: 'divider', borderRadius: 1 }}>
@@ -176,7 +289,7 @@ function EventsTable({ events, vehicleId }: { events: Renegotiation[]; vehicleId
         <TableBody>
           {events.map((ev) => {
             const role =
-              ev.kind === 'troca_bem' ? (ev.new_asset_id === vehicleId ? 'entrou nesta troca' : 'saiu nesta troca') : ''
+              ev.kind === 'troca_bem' ? (ev.new_asset_id === assetId ? 'entrou nesta troca' : 'saiu nesta troca') : ''
             return (
               <TableRow key={ev.id} hover>
                 <TableCell>{formatDateBR(ev.date)}</TableCell>
@@ -219,29 +332,44 @@ function EventsTable({ events, vehicleId }: { events: Renegotiation[]; vehicleId
 }
 
 /**
- * Aba "Financiamento" do veículo: os contratos que o financiam (com saldo,
- * progresso e atalhos para quitar/trocar) e os eventos em que ele aparece.
- * Para quem lançou o financiamento antes de existir o vínculo com o bem, há
- * o atalho de vincular um parcelamento existente.
+ * Aba "Financiamento" de um bem (imóvel ou veículo): os contratos que o
+ * financiam — com dados do banco, saldo, progresso e atalhos para reajustar,
+ * quitar e renegociar — e os eventos em que ele aparece. É daqui que se
+ * registra um financiamento novo; para quem lançou as parcelas antes de
+ * existir o contrato, há o atalho de vincular um parcelamento existente.
  */
-export function VehicleFinanceTab({
-  vehicleId,
-  vehicleStatus,
+export function AssetFinanceTab({
+  assetType,
+  assetId,
+  assetName,
+  purchaseDate,
+  canSwap = false,
 }: {
-  vehicleId: string
-  vehicleStatus: string
+  assetType: AssetType
+  assetId: string
+  /** Nome do bem: vira a descrição padrão das parcelas. */
+  assetName: string
+  /** Data de compra/aquisição, quando conhecida: pré-preenche o contrato. */
+  purchaseDate?: string | null
+  /** Troca de bem financiado: só veículo ativo. */
+  canSwap?: boolean
 }) {
   const qc = useQueryClient()
   const { show } = useToast()
+  const assetNoun = useCatalog('finance.asset_type').labelOf(assetType).toLowerCase()
   const [lineageGroup, setLineageGroup] = useState<string | null>(null)
   const [payoffGroup, setPayoffGroup] = useState<string | null>(null)
   const [swapGroup, setSwapGroup] = useState<string | null | undefined>(undefined) // undefined = fechado
   const [linking, setLinking] = useState(false)
   const [linkGroup, setLinkGroup] = useState('')
+  // undefined = fechado; null = contrato novo; contrato = edição.
+  const [contractForm, setContractForm] = useState<FinancingContract | null | undefined>(undefined)
+  const [readjusting, setReadjusting] = useState<DebtLineage | null>(null)
+  const [deleting, setDeleting] = useState<FinancingContract | null>(null)
 
   const q = useQuery({
-    queryKey: financeKeys.assetDebts('vehicle', vehicleId),
-    queryFn: () => getAssetDebts('vehicle', vehicleId),
+    queryKey: financeKeys.assetDebts(assetType, assetId),
+    queryFn: () => getAssetDebts(assetType, assetId),
   })
   const projectionQ = useQuery({
     queryKey: [...financeKeys.all, 'installments-projection'] as const,
@@ -260,20 +388,27 @@ export function VehicleFinanceTab({
   }, [projectionQ.data, q.data])
 
   const linkMutation = useMutation({
-    mutationFn: () => linkInstallmentGroupAsset(linkGroup, { asset_type: 'vehicle', asset_id: vehicleId }),
+    mutationFn: () => linkInstallmentGroupAsset(linkGroup, { asset_type: assetType, asset_id: assetId }),
     onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: financeKeys.all })
-      qc.invalidateQueries({ queryKey: vehicleKeys.all })
-      show(`${res.entries_updated} parcela(s) vinculada(s) ao veículo.`)
+      show(`${res.entries_updated} parcela(s) vinculada(s) ao ${assetNoun}.`)
       setLinking(false)
       setLinkGroup('')
+    },
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (contract: FinancingContract) => deleteFinancing(contract.id),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: financeKeys.all })
+      show('Financiamento excluído.')
+      setDeleting(null)
     },
   })
 
   if (q.isLoading) return <LoadingState label="Buscando financiamentos…" />
   if (q.isError) return <ErrorState message={errorMessage(q.error)} onRetry={() => q.refetch()} />
   const data = q.data!
-  const canSwap = vehicleStatus === 'active'
 
   return (
     <Stack spacing={2.5}>
@@ -285,10 +420,13 @@ export function VehicleFinanceTab({
           Vincular parcelamento existente
         </Button>
         {canSwap && (
-          <Button size="small" variant="contained" startIcon={<SwapHorizRoundedIcon />} onClick={() => setSwapGroup(null)}>
+          <Button size="small" variant="outlined" startIcon={<SwapHorizRoundedIcon />} onClick={() => setSwapGroup(null)}>
             Troquei este veículo
           </Button>
         )}
+        <Button size="small" variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setContractForm(null)}>
+          Novo financiamento
+        </Button>
       </Stack>
 
       {linking && (
@@ -296,7 +434,7 @@ export function VehicleFinanceTab({
           <CardContent>
             <Stack spacing={1.5}>
               <Typography variant="body2" color="text.secondary">
-                Escolha o parcelamento que financia este veículo. Todas as parcelas (pagas e a pagar)
+                Escolha o parcelamento que financia este {assetNoun}. Todas as parcelas (pagas e a pagar)
                 passam a apontar para ele.
               </Typography>
               {linkMutation.isError && <ErrorState message={errorMessage(linkMutation.error)} />}
@@ -324,8 +462,13 @@ export function VehicleFinanceTab({
 
       {data.debts.length === 0 && (
         <EmptyState
-          title="Nenhum financiamento vinculado"
-          description="Vincule um parcelamento existente ou registre uma troca de veículo para o contrato aparecer aqui."
+          title="Nenhum financiamento"
+          description={`Registre o financiamento deste ${assetNoun}: as parcelas, pagas e a pagar, são geradas de uma vez.`}
+          action={
+            <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setContractForm(null)}>
+              Novo financiamento
+            </Button>
+          }
         />
       )}
 
@@ -333,10 +476,13 @@ export function VehicleFinanceTab({
         <DebtCard
           key={d.root_group_id}
           debt={d}
-          vehicleId={vehicleId}
+          assetId={assetId}
           onLineage={() => setLineageGroup(d.current_group_id)}
           onPayoff={() => setPayoffGroup(d.current_group_id)}
-          onSwap={() => setSwapGroup(d.current_group_id)}
+          onSwap={canSwap ? () => setSwapGroup(d.current_group_id) : undefined}
+          onEditContract={() => d.contract && setContractForm(d.contract)}
+          onReadjust={() => setReadjusting(d)}
+          onDeleteContract={() => d.contract && setDeleting(d.contract)}
         />
       ))}
 
@@ -345,11 +491,11 @@ export function VehicleFinanceTab({
           <Typography variant="subtitle1" fontWeight={800}>
             Eventos
           </Typography>
-          <EventsTable events={data.events} vehicleId={vehicleId} />
+          <EventsTable events={data.events} assetId={assetId} />
         </Stack>
       )}
 
-      {data.debts.some((d) => !d.settled) && (
+      {canSwap && data.debts.some((d) => !d.settled) && (
         <Alert severity="info" sx={{ py: 0.5 }}>
           Ao trocar o veículo, a quitação do contrato costuma sair por menos que o saldo — a
           economia fica registrada como desconto de quitação antecipada.
@@ -360,11 +506,36 @@ export function VehicleFinanceTab({
       {payoffGroup && <PayoffDialog groupId={payoffGroup} onClose={() => setPayoffGroup(null)} />}
       {swapGroup !== undefined && (
         <AssetSwapDialog
-          initialOldVehicleId={vehicleId}
+          initialOldVehicleId={assetId}
           initialOldGroupId={swapGroup ?? undefined}
           onClose={() => setSwapGroup(undefined)}
         />
       )}
+      {contractForm !== undefined && (
+        <FinancingContractDialog
+          assetType={assetType}
+          assetId={assetId}
+          assetName={assetName}
+          purchaseDate={purchaseDate}
+          contract={contractForm ?? undefined}
+          onClose={() => setContractForm(undefined)}
+        />
+      )}
+      {readjusting?.contract && (
+        <FinancingReadjustDialog
+          contract={readjusting.contract}
+          nextDueDate={nextOpenInstallment(readjusting)?.due_date}
+          onClose={() => setReadjusting(null)}
+        />
+      )}
+      <ConfirmDialog
+        open={Boolean(deleting)}
+        title="Excluir financiamento"
+        description={`Excluir "${deleting?.description}"? O contrato e TODAS as parcelas (inclusive as já pagas) serão removidos das despesas. Esta ação não pode ser desfeita.`}
+        loading={deleteMutation.isPending}
+        onConfirm={() => deleting && deleteMutation.mutate(deleting)}
+        onClose={() => setDeleting(null)}
+      />
     </Stack>
   )
 }
