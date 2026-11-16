@@ -1,23 +1,6 @@
 import { useState } from 'react'
-import {
-  Button,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material'
+import { Button, Card, Chip, IconButton, Stack, TextField, Tooltip, Typography } from '@mui/material'
+import { DataTable } from '@/components/tables/DataTable'
 import { AttachFileButton } from '@/components/common/AttachFileButton'
 import { AutocompleteField } from '@/components/fields/AutocompleteField'
 import DownloadRoundedIcon from '@mui/icons-material/DownloadRounded'
@@ -30,7 +13,6 @@ import {
   listPropertyDocuments,
   propertyDocumentDownloadURL,
   uploadPropertyDocument,
-  type Property,
   type PropertyDocType,
   type PropertyDocument,
 } from '../api'
@@ -54,21 +36,15 @@ const emptyForm: FormValues = { doc_type: 'escritura', notes: '' }
  * Documentos do imóvel (escritura, matrícula, carnê de IPTU, ...): upload de
  * quantos arquivos quiser, com tipo e observação.
  */
-export function PropertyDocumentsDialog({
-  property,
-  onClose,
-}: {
-  property: Property
-  onClose: () => void
-}) {
+export function PropertyDocumentsPanel({ propertyId }: { propertyId: string }) {
   const qc = useQueryClient()
   const propertyDocType = useCatalog('patrimony.property_doc_type')
   const [file, setFile] = useState<File | null>(null)
   const [toDelete, setToDelete] = useState<PropertyDocument | null>(null)
 
   const { data, isLoading, isError, error, refetch } = useQuery({
-    queryKey: patrimonyKeys.documents(property.id),
-    queryFn: () => listPropertyDocuments(property.id),
+    queryKey: patrimonyKeys.documents(propertyId),
+    queryFn: () => listPropertyDocuments(propertyId),
   })
 
   const { control, handleSubmit, reset } = useForm<FormValues>({ defaultValues: emptyForm })
@@ -76,29 +52,29 @@ export function PropertyDocumentsDialog({
   const uploadMutation = useMutation({
     mutationFn: (values: FormValues) => {
       if (!file) throw new Error('Selecione um arquivo')
-      return uploadPropertyDocument(property.id, {
+      return uploadPropertyDocument(propertyId, {
         doc_type: values.doc_type,
         notes: values.notes.trim() || null,
         file,
       })
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: patrimonyKeys.documents(property.id) })
+      qc.invalidateQueries({ queryKey: patrimonyKeys.documents(propertyId) })
       reset(emptyForm)
       setFile(null)
     },
   })
 
   const deleteMutation = useMutation({
-    mutationFn: (doc: PropertyDocument) => deletePropertyDocument(property.id, doc.id),
+    mutationFn: (doc: PropertyDocument) => deletePropertyDocument(propertyId, doc.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: patrimonyKeys.documents(property.id) })
+      qc.invalidateQueries({ queryKey: patrimonyKeys.documents(propertyId) })
       setToDelete(null)
     },
   })
 
   const download = async (doc: PropertyDocument) => {
-    const url = await propertyDocumentDownloadURL(property.id, doc.id)
+    const url = await propertyDocumentDownloadURL(propertyId, doc.id)
     window.open(url, '_blank', 'noopener')
   }
 
@@ -107,10 +83,9 @@ export function PropertyDocumentsDialog({
 
   return (
     <>
-      <Dialog open onClose={onClose} maxWidth="md" fullWidth>
-        <DialogTitle sx={{ fontWeight: 800 }}>Documentos — {property.name}</DialogTitle>
-        <DialogContent>
-          <Stack spacing={2.5} sx={{ mt: 1 }}>
+      <Stack spacing={2.5}>
+        <Card sx={{ p: 2 }}>
+          <Stack spacing={2}>
             {uploadMutation.isError && <ErrorState message={errorMessage(uploadMutation.error)} />}
 
             <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
@@ -133,9 +108,7 @@ export function PropertyDocumentsDialog({
               <Controller
                 name="notes"
                 control={control}
-                render={({ field }) => (
-                  <TextField {...field} label="Observação (opcional)" fullWidth />
-                )}
+                render={({ field }) => <TextField {...field} label="Observação (opcional)" fullWidth />}
               />
             </Stack>
 
@@ -152,72 +125,80 @@ export function PropertyDocumentsDialog({
                   PDF, imagem ou DOC
                 </Typography>
               )}
-              <Button
-                variant="contained"
-                onClick={submit}
-                disabled={!file || uploadMutation.isPending}
-              >
+              <Button variant="contained" onClick={submit} disabled={!file || uploadMutation.isPending}>
                 {uploadMutation.isPending ? 'Enviando…' : 'Adicionar'}
               </Button>
             </Stack>
-
-            <Divider />
-
-            {isLoading ? (
-              <LoadingState />
-            ) : isError ? (
-              <ErrorState message={errorMessage(error)} onRetry={refetch} />
-            ) : docs.length === 0 ? (
-              <EmptyState
-                icon={<DescriptionRoundedIcon />}
-                title="Nenhum documento"
-                description="Guarde a escritura, a matrícula, o carnê de IPTU e o que mais precisar deste imóvel."
-              />
-            ) : (
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell>Tipo</TableCell>
-                    <TableCell>Arquivo</TableCell>
-                    <TableCell>Observação</TableCell>
-                    <TableCell>Enviado em</TableCell>
-                    <TableCell align="right">Ações</TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {docs.map((doc) => (
-                    <TableRow key={doc.id} hover>
-                      <TableCell sx={{ fontWeight: 600 }}>
-                        {propertyDocType.labelOf(doc.doc_type)}
-                      </TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>{doc.file_name}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>{doc.notes || '—'}</TableCell>
-                      <TableCell sx={{ color: 'text.secondary' }}>{formatDate(doc.created_at)}</TableCell>
-                      <TableCell align="right">
-                        <Tooltip title="Baixar">
-                          <IconButton size="small" onClick={() => download(doc)}>
-                            <DownloadRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                        <Tooltip title="Excluir">
-                          <IconButton size="small" color="error" onClick={() => setToDelete(doc)}>
-                            <DeleteOutlineRoundedIcon fontSize="small" />
-                          </IconButton>
-                        </Tooltip>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            )}
           </Stack>
-        </DialogContent>
-        <DialogActions sx={{ px: 3, pb: 2 }}>
-          <Button onClick={onClose} color="inherit">
-            Fechar
-          </Button>
-        </DialogActions>
-      </Dialog>
+        </Card>
+
+        {isLoading ? (
+          <LoadingState />
+        ) : isError ? (
+          <ErrorState message={errorMessage(error)} onRetry={refetch} />
+        ) : docs.length === 0 ? (
+          <EmptyState
+            icon={<DescriptionRoundedIcon />}
+            title="Nenhum documento"
+            description="Guarde a escritura, a matrícula, o carnê de IPTU e o que mais precisar deste imóvel."
+          />
+        ) : (
+          <Card>
+            <DataTable
+              rows={docs}
+              getRowKey={(doc) => doc.id}
+              columns={[
+                {
+                  key: 'type',
+                  header: 'Tipo',
+                  mobile: 'title',
+                  cellSx: { fontWeight: 600 },
+                  render: (doc) => propertyDocType.labelOf(doc.doc_type),
+                },
+                {
+                  key: 'file',
+                  header: 'Arquivo',
+                  cellSx: { color: 'text.secondary' },
+                  render: (doc) => doc.file_name,
+                },
+                {
+                  key: 'notes',
+                  header: 'Observação',
+                  cellSx: { color: 'text.secondary' },
+                  render: (doc) => doc.notes || '—',
+                },
+                {
+                  key: 'created',
+                  header: 'Enviado em',
+                  mobileLabel: 'Enviado',
+                  cellSx: { color: 'text.secondary' },
+                  render: (doc) => formatDate(doc.created_at),
+                },
+                {
+                  key: 'actions',
+                  header: 'Ações',
+                  align: 'right',
+                  mobile: 'actions',
+                  render: (doc) => (
+                    <>
+                      <Tooltip title="Baixar">
+                        <IconButton size="small" onClick={() => download(doc)}>
+                          <DownloadRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                      <Tooltip title="Excluir">
+                        <IconButton size="small" color="error" onClick={() => setToDelete(doc)}>
+                          <DeleteOutlineRoundedIcon fontSize="small" />
+                        </IconButton>
+                      </Tooltip>
+                    </>
+                  ),
+                },
+              ]}
+            />
+          </Card>
+        )}
+      </Stack>
 
       <ConfirmDialog
         open={Boolean(toDelete)}
