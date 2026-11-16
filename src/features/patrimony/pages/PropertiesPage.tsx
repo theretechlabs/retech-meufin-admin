@@ -1,46 +1,17 @@
 import { useMemo, useState } from 'react'
-import {
-  Button,
-  Card,
-  Chip,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  IconButton,
-  InputAdornment,
-  Stack,
-  TextField,
-  Tooltip,
-  Typography,
-} from '@mui/material'
+import { Button, Card, Chip, IconButton, InputAdornment, TextField, Tooltip, Typography } from '@mui/material'
 import AddRoundedIcon from '@mui/icons-material/AddRounded'
 import EditRoundedIcon from '@mui/icons-material/EditRounded'
 import DeleteOutlineRoundedIcon from '@mui/icons-material/DeleteOutlineRounded'
 import SearchRoundedIcon from '@mui/icons-material/SearchRounded'
 import HomeWorkRoundedIcon from '@mui/icons-material/HomeWorkRounded'
-import FolderRoundedIcon from '@mui/icons-material/FolderRounded'
+import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { Controller, useForm } from 'react-hook-form'
-import { MoneyField } from '@/components/fields/MoneyField'
-import { AutocompleteField } from '@/components/fields/AutocompleteField'
-import {
-  createProperty,
-  deleteProperty,
-  listProperties,
-  updateProperty,
-  type Property,
-  type PropertyInput,
-} from '../api'
-import {
-  errorMessage,
-  formatArea,
-  formatCents,
-  patrimonyKeys,
-} from '../constants'
+import { useNavigate } from 'react-router-dom'
+import { deleteProperty, listProperties, type Property } from '../api'
+import { errorMessage, formatArea, formatCents, patrimonyKeys } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
-import { PropertyDocumentsDialog } from '../components/PropertyDocumentsDialog'
+import { PropertyFormDialog } from '../components/PropertyFormDialog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
 import { DataTable } from '@/components/tables/DataTable'
 import { FilterBar } from '@/components/common/FilterBar'
@@ -49,262 +20,17 @@ import { ConfirmDialog } from '@/features/health/components/ConfirmDialog'
 import { EmptyState, ErrorState, LoadingState } from '@/features/health/components/StateViews'
 import { useToast } from '@/providers/ToastProvider'
 
-type FormValues = {
-  name: string
-  property_type: string
-  address: string
-  city: string
-  state: string
-  zip_code: string
-  registration_number: string
-  area_m2: string
-  purchase_date: string
-  purchase_value_cents: string
-  current_value_cents: string
-  notes: string
-}
-
-const emptyForm: FormValues = {
-  name: '',
-  property_type: 'casa',
-  address: '',
-  city: '',
-  state: '',
-  zip_code: '',
-  registration_number: '',
-  area_m2: '',
-  purchase_date: '',
-  purchase_value_cents: '',
-  current_value_cents: '',
-  notes: '',
-}
-
-function mapPropertyToForm(p: Property): FormValues {
-  return {
-    name: p.name,
-    property_type: p.property_type,
-    address: p.address ?? '',
-    city: p.city ?? '',
-    state: p.state ?? '',
-    zip_code: p.zip_code ?? '',
-    registration_number: p.registration_number ?? '',
-    area_m2: p.area_m2 != null ? String(p.area_m2) : '',
-    purchase_date: p.purchase_date ?? '',
-    purchase_value_cents: p.purchase_value_cents != null ? String(p.purchase_value_cents) : '',
-    current_value_cents: p.current_value_cents != null ? String(p.current_value_cents) : '',
-    notes: p.notes ?? '',
-  }
-}
-
-// Converte a máscara pt-BR do MoneyField ("1.234,56") em centavos inteiros.
-function maskToCents(masked: string): number | null {
-  const digits = String(masked).replace(/\D/g, '')
-  return digits ? Number(digits) : null
-}
-
-function PropertyFormDialog({
-  open,
-  property,
-  onClose,
-}: {
-  open: boolean
-  property: Property | null
-  onClose: () => void
-}) {
-  const qc = useQueryClient()
-  const { show } = useToast()
-  const isEdit = Boolean(property)
-  const propertyType = useCatalog('patrimony.property_type')
-
-  const {
-    control,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<FormValues>({
-    values: property ? mapPropertyToForm(property) : emptyForm,
-  })
-
-  const mutation = useMutation({
-    mutationFn: (values: FormValues) => {
-      const input: PropertyInput = {
-        name: values.name.trim(),
-        property_type: values.property_type,
-        address: values.address.trim() || null,
-        city: values.city.trim() || null,
-        state: values.state.trim() || null,
-        zip_code: values.zip_code.trim() || null,
-        registration_number: values.registration_number.trim() || null,
-        area_m2: values.area_m2 ? parseFloat(values.area_m2.replace(',', '.')) || null : null,
-        purchase_date: values.purchase_date || null,
-        purchase_value_cents: maskToCents(values.purchase_value_cents),
-        current_value_cents: maskToCents(values.current_value_cents),
-        notes: values.notes.trim() || null,
-      }
-      if (isEdit && property) return updateProperty(property.id, input)
-      return createProperty(input)
-    },
-    onSuccess: () => {
-      show(isEdit ? 'Imóvel atualizado com sucesso.' : 'Imóvel cadastrado com sucesso.')
-      qc.invalidateQueries({ queryKey: patrimonyKeys.all })
-      reset(emptyForm)
-      onClose()
-    },
-  })
-
-  const submit = handleSubmit((values) => mutation.mutate(values))
-
-  return (
-    <Dialog open={open} onClose={mutation.isPending ? undefined : onClose} maxWidth="md" fullWidth>
-      <DialogTitle sx={{ fontWeight: 800 }}>{isEdit ? 'Editar imóvel' : 'Novo imóvel'}</DialogTitle>
-      <DialogContent>
-        <Stack spacing={2.5} sx={{ mt: 1 }}>
-          {mutation.isError && <ErrorState message={errorMessage(mutation.error)} />}
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Controller
-              name="name"
-              control={control}
-              rules={{ required: 'Informe o nome do imóvel' }}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Nome"
-                  fullWidth
-                  required
-                  placeholder="Ex: Apartamento Centro"
-                  error={Boolean(errors.name)}
-                  helperText={errors.name?.message}
-                />
-              )}
-            />
-            <Controller
-              name="property_type"
-              control={control}
-              rules={{ required: true }}
-              render={({ field }) => (
-                <AutocompleteField
-                  label="Tipo"
-                  fullWidth={false}
-                  sx={{ minWidth: 180 }}
-                  required
-                  value={field.value}
-                  onChange={field.onChange}
-                  options={propertyType.options}
-                  loading={propertyType.isLoading}
-                  disableClearable
-                />
-              )}
-            />
-          </Stack>
-
-          <Divider />
-          <Typography variant="caption" color="text.secondary" fontWeight={600}>
-            LOCALIZAÇÃO
-          </Typography>
-
-          <Controller
-            name="address"
-            control={control}
-            render={({ field }) => <TextField {...field} label="Endereço" fullWidth />}
-          />
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Controller
-              name="city"
-              control={control}
-              render={({ field }) => <TextField {...field} label="Cidade" fullWidth />}
-            />
-            <Controller
-              name="state"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="UF" sx={{ minWidth: 100 }} inputProps={{ maxLength: 2 }} />
-              )}
-            />
-            <Controller
-              name="zip_code"
-              control={control}
-              render={({ field }) => <TextField {...field} label="CEP" sx={{ minWidth: 140 }} />}
-            />
-          </Stack>
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Controller
-              name="registration_number"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="Matrícula" fullWidth placeholder="Nº da matrícula no cartório" />
-              )}
-            />
-            <Controller
-              name="area_m2"
-              control={control}
-              render={({ field }) => (
-                <TextField {...field} label="Área (m²)" sx={{ minWidth: 160 }} type="number" inputProps={{ min: 0, step: '0.01' }} />
-              )}
-            />
-          </Stack>
-
-          <Divider />
-          <Typography variant="caption" color="text.secondary" fontWeight={600}>
-            VALORES
-          </Typography>
-
-          <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
-            <Controller
-              name="purchase_date"
-              control={control}
-              render={({ field }) => (
-                <TextField
-                  {...field}
-                  label="Data de compra"
-                  type="date"
-                  fullWidth
-                  InputLabelProps={{ shrink: true }}
-                />
-              )}
-            />
-            <Controller
-              name="purchase_value_cents"
-              control={control}
-              render={({ field }) => <MoneyField {...field} label="Valor de compra" fullWidth />}
-            />
-            <Controller
-              name="current_value_cents"
-              control={control}
-              render={({ field }) => <MoneyField {...field} label="Valor atual" fullWidth />}
-            />
-          </Stack>
-
-          <Controller
-            name="notes"
-            control={control}
-            render={({ field }) => (
-              <TextField {...field} label="Observações" fullWidth multiline minRows={2} />
-            )}
-          />
-        </Stack>
-      </DialogContent>
-      <DialogActions sx={{ px: 3, pb: 2 }}>
-        <Button onClick={onClose} color="inherit" disabled={mutation.isPending}>
-          Cancelar
-        </Button>
-        <Button onClick={submit} variant="contained" disabled={mutation.isPending}>
-          {isEdit ? 'Salvar' : 'Cadastrar'}
-        </Button>
-      </DialogActions>
-    </Dialog>
-  )
-}
+const detailPath = (id: string) => `/dashboard/patrimonio/imoveis/${id}`
 
 export default function PropertiesPage() {
   const qc = useQueryClient()
+  const navigate = useNavigate()
   const { show } = useToast()
   const propertyType = useCatalog('patrimony.property_type')
 
   const [formOpen, setFormOpen] = useState(false)
   const [editing, setEditing] = useState<Property | null>(null)
   const [toDelete, setToDelete] = useState<Property | null>(null)
-  const [docsFor, setDocsFor] = useState<Property | null>(null)
 
   const [q, setQ] = useState('')
   const [page, setPage] = useState(0)
@@ -354,7 +80,7 @@ export default function PropertiesPage() {
     <>
       <PageHeader
         title="Imóveis"
-        subtitle="Cadastre os imóveis da família e guarde seus documentos."
+        subtitle="Cadastre os imóveis da família e acompanhe valores, impostos e documentos de cada um."
         action={
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate}>
             Novo imóvel
@@ -405,6 +131,7 @@ export default function PropertiesPage() {
             rows={properties}
             getRowKey={(p) => p.id}
             size="medium"
+            onRowClick={(p) => navigate(detailPath(p.id))}
             columns={[
               {
                 key: 'name',
@@ -461,18 +188,37 @@ export default function PropertiesPage() {
                 mobile: 'actions',
                 render: (p) => (
                   <>
-                    <Tooltip title="Documentos">
-                      <IconButton size="small" onClick={() => setDocsFor(p)}>
-                        <FolderRoundedIcon fontSize="small" />
+                    <Tooltip title="Ver detalhes">
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(detailPath(p.id))
+                        }}
+                      >
+                        <OpenInNewRoundedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Editar">
-                      <IconButton size="small" onClick={() => openEdit(p)}>
+                      <IconButton
+                        size="small"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          openEdit(p)
+                        }}
+                      >
                         <EditRoundedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
                     <Tooltip title="Excluir">
-                      <IconButton size="small" color="error" onClick={() => setToDelete(p)}>
+                      <IconButton
+                        size="small"
+                        color="error"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setToDelete(p)
+                        }}
+                      >
                         <DeleteOutlineRoundedIcon fontSize="small" />
                       </IconButton>
                     </Tooltip>
@@ -492,10 +238,13 @@ export default function PropertiesPage() {
       )}
 
       {formOpen && (
-        <PropertyFormDialog open={formOpen} property={editing} onClose={() => setFormOpen(false)} />
+        <PropertyFormDialog
+          property={editing}
+          onClose={() => setFormOpen(false)}
+          // Recém-cadastrado: abre o imóvel para seguir com valores, impostos e documentos.
+          onCreated={(created) => navigate(detailPath(created.id))}
+        />
       )}
-
-      {docsFor && <PropertyDocumentsDialog property={docsFor} onClose={() => setDocsFor(null)} />}
 
       <ConfirmDialog
         open={Boolean(toDelete)}

@@ -41,6 +41,25 @@ export type PropertyInput = {
   active?: boolean
 }
 
+/** O PUT substitui o imóvel inteiro: edição parcial parte do registro atual. */
+export function propertyToInput(p: Property): PropertyInput {
+  return {
+    name: p.name,
+    property_type: p.property_type,
+    address: p.address ?? null,
+    city: p.city ?? null,
+    state: p.state ?? null,
+    zip_code: p.zip_code ?? null,
+    registration_number: p.registration_number ?? null,
+    area_m2: p.area_m2 ?? null,
+    purchase_date: p.purchase_date ?? null,
+    purchase_value_cents: p.purchase_value_cents ?? null,
+    current_value_cents: p.current_value_cents ?? null,
+    notes: p.notes ?? null,
+    active: p.active,
+  }
+}
+
 export type PropertyDocType =
   | 'escritura' | 'matricula' | 'iptu' | 'contrato' | 'seguro' | 'planta' | 'outros'
 

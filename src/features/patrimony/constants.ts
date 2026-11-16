@@ -26,6 +26,13 @@ export function formatCents(v?: number | null): string {
   return (v / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
 }
 
+// Converte a máscara pt-BR do MoneyField ("1.234,56") em centavos inteiros;
+// campo vazio vira null.
+export function maskToCents(masked: string): number | null {
+  const digits = String(masked).replace(/\D/g, '')
+  return digits ? Number(digits) : null
+}
+
 export function formatDate(s?: string | null): string {
   if (!s) return '—'
   const [y, m, d] = s.slice(0, 10).split('-')
