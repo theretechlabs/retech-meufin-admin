@@ -67,9 +67,12 @@ export function SupplierField({
         />
         {createCategory && (
           <Button
+            variant="outlined"
             startIcon={<AddRoundedIcon />}
             onClick={() => setCreating(true)}
-            sx={{ whiteSpace: 'nowrap', flexShrink: 0, mt: 1 }}
+            // Mesma altura do campo ao lado (56px do input médio); o helperText
+            // fica abaixo do campo e não entra na conta.
+            sx={{ whiteSpace: 'nowrap', flexShrink: 0, height: 56 }}
           >
             {createLabel}
           </Button>

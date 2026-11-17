@@ -102,6 +102,10 @@ export function AutocompleteField({
       renderInput={(params) => (
         <TextField
           {...params}
+          // O input sempre ocupa a raiz: com `fullWidth={false}` o MUI repassa
+          // false ao TextField e ele encolhe para a largura intrínseca,
+          // ignorando o minWidth da raiz (o filtro mostrava "To…").
+          fullWidth
           label={label}
           placeholder={placeholder}
           required={required}
