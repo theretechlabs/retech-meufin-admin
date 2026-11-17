@@ -9,7 +9,7 @@ import OpenInNewRoundedIcon from '@mui/icons-material/OpenInNewRounded'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import { deleteProperty, listProperties, type Property } from '../api'
-import { errorMessage, formatArea, formatCents, patrimonyKeys } from '../constants'
+import { errorMessage, formatArea, patrimonyKeys } from '../constants'
 import { useCatalog } from '@/lib/catalogs/useCatalog'
 import { PropertyFormDialog } from '../components/PropertyFormDialog'
 import { TablePaginationBR } from '@/components/tables/TablePaginationBR'
@@ -80,7 +80,7 @@ export default function PropertiesPage() {
     <>
       <PageHeader
         title="Imóveis"
-        subtitle="Cadastre os imóveis da família e acompanhe valores, impostos e documentos de cada um."
+        subtitle="Cadastre os imóveis da família e acompanhe financiamento, impostos e documentos de cada um."
         action={
           <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate}>
             Novo imóvel
@@ -172,14 +172,6 @@ export default function PropertiesPage() {
                 header: 'Área',
                 cellSx: { color: 'text.secondary' },
                 render: (p) => formatArea(p.area_m2),
-              },
-              {
-                key: 'value',
-                header: 'Valor atual',
-                align: 'right',
-                mobile: 'value',
-                cellSx: { fontWeight: 600 },
-                render: (p) => formatCents(p.current_value_cents ?? p.purchase_value_cents),
               },
               {
                 key: 'actions',
