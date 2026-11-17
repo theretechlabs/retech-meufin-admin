@@ -32,6 +32,7 @@ Helpers: `optionsFromLabels(X_LABEL)` para enums que só têm mapa de rótulo; `
 - Datas `YYYY-MM-DD` na API; "hoje" é o fuso local, nunca `toISOString()`.
 - Prettier só nos arquivos que você alterou e só no trecho alterado: não reformatar arquivos inteiros numa PR de outra coisa.
 - Antes de commitar: `npm run type-check`, `npx eslint <pasta alterada>`, `npm run build`.
+- **Botão de ação de página ou de seção** (Novo, Editar, Importar, ação do bem no cabeçalho…): `variant="contained"`, tamanho padrão (sem `size="small"`), com `startIcon`. Vale para todos do mesmo cabeçalho — não misturar `outlined`/`text`/`small` ao lado de um "Novo". Ficam fora: ação de linha de tabela, barra de ações dentro de card, formulário inline e `DialogActions` (Cancelar = `color="inherit"`). Botão ao lado de campo tem a altura do campo.
 
 ## Telefone (PWA): uma base, dois layouts
 

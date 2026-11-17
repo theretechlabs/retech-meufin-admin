@@ -482,8 +482,7 @@ function InvoicePurchases({ invoice }: { invoice: Entry }) {
           Compras da fatura
         </Typography>
         <Button
-          size="small"
-          variant="outlined"
+          variant="contained"
           startIcon={<AddRoundedIcon />}
           onClick={() => setPurchaseOpen(true)}
         >
@@ -639,7 +638,7 @@ export default function FaturasPage() {
         action={
           <>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<UploadFileRoundedIcon />}
               onClick={() => setImportOpen(true)}
               disabled={noCards}

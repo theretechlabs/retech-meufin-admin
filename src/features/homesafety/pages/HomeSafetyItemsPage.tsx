@@ -751,7 +751,7 @@ export default function HomeSafetyItemsPage() {
         subtitle="Gerencie os itens de segurança da casa, suas validades e manutenções."
         action={
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" startIcon={<LibraryAddRoundedIcon />} onClick={() => setCatalogOpen(true)}>
+            <Button variant="contained" startIcon={<LibraryAddRoundedIcon />} onClick={() => setCatalogOpen(true)}>
               Adicionar do catálogo
             </Button>
             <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate}>
