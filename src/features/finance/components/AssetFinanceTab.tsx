@@ -416,15 +416,15 @@ export function AssetFinanceTab({
         <Typography variant="subtitle1" fontWeight={800} sx={{ flex: 1 }}>
           Financiamentos
         </Typography>
-        <Button size="small" startIcon={<LinkRoundedIcon />} onClick={() => setLinking((v) => !v)}>
+        <Button variant="contained" startIcon={<LinkRoundedIcon />} onClick={() => setLinking((v) => !v)}>
           Vincular parcelamento existente
         </Button>
         {canSwap && (
-          <Button size="small" variant="outlined" startIcon={<SwapHorizRoundedIcon />} onClick={() => setSwapGroup(null)}>
+          <Button variant="contained" startIcon={<SwapHorizRoundedIcon />} onClick={() => setSwapGroup(null)}>
             Troquei este veículo
           </Button>
         )}
-        <Button size="small" variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setContractForm(null)}>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setContractForm(null)}>
           Novo financiamento
         </Button>
       </Stack>
