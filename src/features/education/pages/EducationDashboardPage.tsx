@@ -97,7 +97,7 @@ export default function EducationDashboardPage() {
         subtitle="Material escolar, mensalidades e economia por ano letivo."
         action={
           <Stack direction="row" spacing={1}>
-            <Button variant="outlined" onClick={() => navigate('/dashboard/educacao/matriculas')}>
+            <Button variant="contained" onClick={() => navigate('/dashboard/educacao/matriculas')}>
               Matrículas
             </Button>
             <Button variant="contained" onClick={() => navigate('/dashboard/educacao/listas')}>

@@ -708,7 +708,6 @@ function MaintenanceTab({ vehicleId, currentKM }: { vehicleId: string; currentKM
       <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
         <Button
           variant="contained"
-          size="small"
           startIcon={<AddRoundedIcon />}
           onClick={() => { setEditing(null); setFormOpen(true) }}
         >
@@ -724,7 +723,6 @@ function MaintenanceTab({ vehicleId, currentKM }: { vehicleId: string; currentKM
           action={
             <Button
               variant="contained"
-              size="small"
               startIcon={<AddRoundedIcon />}
               onClick={() => { setEditing(null); setFormOpen(true) }}
             >
@@ -1354,7 +1352,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
   return (
     <>
       <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-        <Button variant="contained" size="small" startIcon={<AddRoundedIcon />} onClick={() => setFormOpen(true)}>
+        <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setFormOpen(true)}>
           Novo agendamento
         </Button>
       </Stack>
@@ -1365,7 +1363,7 @@ function SchedulesTab({ vehicleId }: { vehicleId: string }) {
           title="Nenhum agendamento"
           description="Os agendamentos são criados automaticamente ao registrar peças com intervalo de troca, ou manualmente."
           action={
-            <Button variant="contained" size="small" startIcon={<AddRoundedIcon />} onClick={() => setFormOpen(true)}>
+            <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={() => setFormOpen(true)}>
               Novo agendamento
             </Button>
           }
@@ -1683,8 +1681,7 @@ export default function VehicleDetailPage() {
           {vehicle.status === 'active' && (
             <Tooltip title="Registrar a troca: quita o financiamento, marca como vendido e cria o contrato do carro novo">
               <Button
-                size="small"
-                variant="outlined"
+                variant="contained"
                 startIcon={<SwapHorizRoundedIcon />}
                 onClick={() => setSwapOpen(true)}
                 sx={{ mr: 1 }}

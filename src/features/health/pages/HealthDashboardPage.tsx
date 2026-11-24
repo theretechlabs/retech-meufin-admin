@@ -199,8 +199,7 @@ export default function HealthDashboardPage() {
             >
               <span>
                 <Button
-                  variant="outlined"
-                  size="small"
+                  variant="contained"
                   startIcon={<ShareRoundedIcon />}
                   disabled={!familyMemberId}
                   onClick={() => setShareOpen(true)}

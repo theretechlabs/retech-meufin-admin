@@ -76,8 +76,7 @@ export default function PropertyDetailPage() {
           )}
         </Box>
         <Button
-          size="small"
-          variant="outlined"
+          variant="contained"
           startIcon={<EditRoundedIcon />}
           onClick={() => setEditOpen(true)}
         >
@@ -119,7 +118,7 @@ export default function PropertyDetailPage() {
           propertyId={property.id}
           header={(openCreate) => (
             <Stack direction="row" justifyContent="flex-end" sx={{ mb: 2 }}>
-              <Button variant="contained" size="small" startIcon={<AddRoundedIcon />} onClick={openCreate}>
+              <Button variant="contained" startIcon={<AddRoundedIcon />} onClick={openCreate}>
                 Novo imposto
               </Button>
             </Stack>

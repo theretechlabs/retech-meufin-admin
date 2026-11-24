@@ -379,7 +379,7 @@ export default function ExamResultsPage() {
         action={
           <Stack direction="row" spacing={1}>
             <Button
-              variant="outlined"
+              variant="contained"
               startIcon={<UploadFileRoundedIcon />}
               onClick={() => setImportOpen(true)}
             >
