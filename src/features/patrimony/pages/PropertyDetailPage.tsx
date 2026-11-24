@@ -11,7 +11,6 @@ import { ErrorState, LoadingState } from '@/features/health/components/StateView
 import { getProperty } from '../api'
 import { errorMessage, patrimonyKeys } from '../constants'
 import { AssetTaxesList } from '../components/AssetTaxesList'
-import { PropertyDebtStats } from '../components/PropertyDebtStats'
 import { PropertyDocumentsPanel } from '../components/PropertyDocumentsPanel'
 import { PropertyFormDialog } from '../components/PropertyFormDialog'
 import { PropertySummaryTab } from '../components/PropertySummaryTab'
@@ -104,9 +103,7 @@ export default function PropertyDetailPage() {
       {tab === 'resumo' && (
         <PropertySummaryTab
           property={property}
-          extraStats={
-            <PropertyDebtStats propertyId={property.id} currentValueCents={property.current_value_cents} />
-          }
+          onOpenFinancing={() => setSearch({ aba: 'financiamento' }, { replace: true })}
         />
       )}
       {tab === 'financiamento' && (

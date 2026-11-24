@@ -1,10 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { Box, Button, Card, Grid, Stack, Typography } from '@mui/material'
-import EditRoundedIcon from '@mui/icons-material/EditRounded'
-import { StatCard } from '@/components/common/StatCard'
+import type { ReactNode } from 'react'
+import { Box, Card, Grid, Stack, Typography } from '@mui/material'
 import type { Property } from '../api'
-import { formatArea, formatCents, formatDate, formatPct } from '../constants'
-import { PropertyValuesDialog } from './PropertyValuesDialog'
+import { formatArea } from '../constants'
+import { PropertyFinanceStats } from './PropertyFinanceStats'
 
 function DetailItem({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -20,49 +18,19 @@ function DetailItem({ label, children }: { label: string; children: ReactNode })
 }
 
 /**
- * Resumo do imóvel: valores (compra, atual, valorização) e identificação.
- * `extraStats` recebe indicadores de outros módulos (ex.: financiamento).
+ * Resumo do imóvel: valores (vindos do financiamento, nunca digitados) e
+ * identificação.
  */
-export function PropertySummaryTab({ property, extraStats }: { property: Property; extraStats?: ReactNode }) {
-  const [valuesOpen, setValuesOpen] = useState(false)
-  const purchase = property.purchase_value_cents ?? null
-  const current = property.current_value_cents ?? null
-  const gain = purchase != null && current != null ? current - purchase : null
-  const gainPct = gain != null && purchase ? (gain / purchase) * 100 : null
-
+export function PropertySummaryTab({
+  property,
+  onOpenFinancing,
+}: {
+  property: Property
+  onOpenFinancing: () => void
+}) {
   return (
     <Stack spacing={3}>
-      <Box>
-        <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1.5 }}>
-          <Typography variant="subtitle1" fontWeight={700}>
-            Valores
-          </Typography>
-          <Button size="small" startIcon={<EditRoundedIcon />} onClick={() => setValuesOpen(true)}>
-            Editar valores
-          </Button>
-        </Stack>
-        <Grid container spacing={2.5}>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatCard
-              label="Valor de compra"
-              value={formatCents(purchase)}
-              hint={property.purchase_date ? `Comprado em ${formatDate(property.purchase_date)}` : undefined}
-            />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatCard label="Valor atual" value={formatCents(current)} />
-          </Grid>
-          <Grid size={{ xs: 6, md: 3 }}>
-            <StatCard
-              label="Valorização"
-              value={formatCents(gain)}
-              hint={gainPct != null ? formatPct(gainPct) : undefined}
-              color={gain == null ? undefined : gain >= 0 ? 'success' : 'error'}
-            />
-          </Grid>
-          {extraStats}
-        </Grid>
-      </Box>
+      <PropertyFinanceStats propertyId={property.id} onOpenFinancing={onOpenFinancing} />
 
       <Card sx={{ p: 2.5 }}>
         <Typography variant="subtitle1" fontWeight={700} sx={{ mb: 2 }}>
@@ -93,8 +61,6 @@ export function PropertySummaryTab({ property, extraStats }: { property: Propert
           )}
         </Grid>
       </Card>
-
-      {valuesOpen && <PropertyValuesDialog property={property} onClose={() => setValuesOpen(false)} />}
     </Stack>
   )
 }
